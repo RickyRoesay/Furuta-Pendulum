@@ -1,0 +1,18 @@
+<cangaroo-workspace>
+ <tabs>
+  <tab TimestampMode="0" title="Trace" mode="aggregated" type="TraceWindow">
+   <LinearTraceView AutoScroll="1"/>
+   <AggregatedTraceView SortColumn="-1"/>
+  </tab>
+ </tabs>
+ <setup>
+  <network name="Network 1">
+   <interfaces>
+    <interface driver="CANable SLCAN" auto-restart-time="100" name="COM7" bitrate="1000000" configure="1" sample-point="875" triple-sampling="0" sample-point-fd="875" auto-restart="0" bitrate-fd="4000000" listen-only="0" one-shot="0" can-fd="0" type="can"/>
+   </interfaces>
+   <databases>
+    <database filename="C:/Users/Owner/Documents/ODESC V4.2/debug.dbc" type="dbc"/>
+   </databases>
+  </network>
+ </setup>
+</cangaroo-workspace>

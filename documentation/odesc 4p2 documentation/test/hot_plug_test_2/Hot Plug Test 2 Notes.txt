@@ -1,0 +1,7 @@
+Tested with a more powerful 170W version of the lenovo chargers.  
+
+This was measured with a much more expensive scope and current sensor than the first hot plug test.  
+
+The yellow signal is the voltage measured at the input of the motor controller using the tektronix passive probe that came with the scope
+
+the green signal is the inrush current after attaching the connector to the harness I made.  It was measured using a very high bandwidth, +/- 300A rogowski coil. 

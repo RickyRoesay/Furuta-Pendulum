@@ -1,0 +1,17 @@
+STM32F405RGT6
+
+SN65HVD232DR can transciever on odrive
+sit1051aT/3 cheapo chinese can transciever
+
+mosfets: 
+  markings: 5C628L YESK89
+  p/n: NTMFS5C628NL
+
+
+Gate driver, current shunt amplifier & buck controller: 
+DRV8301 
+
+
+brake resistor/ local capacitance discharge HS LS gate driver markings:
+12p8cxj
+51098so? or ...50?

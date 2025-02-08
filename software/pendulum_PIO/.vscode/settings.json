@@ -1,0 +1,18 @@
+{
+    "cmake.configureOnOpen": false,
+    "files.associations": {
+        "*.tcc": "c",
+        "unordered_map": "c",
+        "numeric": "c",
+        "ostream": "c",
+        "system_error": "cpp",
+        "array": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp",
+        "random": "cpp",
+        "numbers": "cpp",
+        "streambuf": "cpp"
+    }
+}
