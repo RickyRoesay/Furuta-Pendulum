@@ -819,7 +819,7 @@ void setup()
   motor.linkCurrentSense(&current_sense);  // link motor and current sense
 
   drv_ic.link_spi_class(&SPI_2);
-  if(drv_ic.init(GainSetting_e::GainSetting_40_V_over_V) != true)
+  if(drv_ic.init(DRV8301_GainSetting_10_V_over_V) != true)
   {
     shut_down_power_fault_active = true;
 
