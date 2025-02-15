@@ -16,6 +16,20 @@
 #endif 
 
 
+/** adc counts reading:  */
+#if 0
+#include "../../../hardware_api.h"
+
+#include "../lib/Arduino-FOC/src/common/foc_utils.h"
+#include "../lib/Arduino-FOC/src/drivers/hardware_api.h"
+#include "../lib/Arduino-FOC/src/drivers/hardware_specific/stm32/stm32_mcu.h"
+#include "../../../hardware_api.h"
+#include "../stm32_mcu.h"
+#include "stm32f4_hal.h"
+#include "stm32f4_utils.h"
+#include "Arduino.h"
+#endif 
+
 
 
 ////////////////////////// DEFINITIONS: ////////////////////////////
@@ -77,12 +91,11 @@
 
 
 
-/** Number of pole pairs on the the GB54-1 is ?? config is 12n14p */
+/** Number of pole pairs on the the GB54-1 is 7, config is 12n14p */
 #define NUM_OF_POLE_PAIRS 7
 
 /** Encoder Pulse/Counts per Revolution = 2048 AM103, default switch config */
 #define ENCODER_PPR 2048UL
-#define ENCODER_CPR 4U * ENCODER_PPR
 
 
 #define FAKE_AS5048A_SENSOR
@@ -102,13 +115,23 @@
 #define MAG_SNS_PARITY_BIT_IDX 15
 #define MAG_SNS_nW_R_BIT_IDX 14
 
+
+
 /** Shunt Resistor Resistance in Ohms 
- * NOTE: 500uOhms is default, but i've replaced the value with a 10mOhm shunt */
-#define SHUNT_RESISTANCE_OHMS 0.010f // 
+ * NOTE: 500uOhms is default for the ODESC 4.2, but i've replaced the value
+ * with a 10mOhm shunt to get better resolution for the current levels the pendulum
+ * will be running at. */
+#define SHUNT_RESISTANCE_OHMS 0.010f 
 
 /** Lowside Motor Current sensor gain. 
- * This can be changed via spi comms by writing to a reg, by default it's 10 */
-#define MOTOR_CURR_SNS_GAIN 10.0f 
+ * This can be changed via spi comms by writing to a reg, by default it's 10. */
+#define MOTOR_CURR_SNS_GAIN 40.0f 
+#define DRV8301_GAIN_SETTING DRV8301_GainSetting_40_V_over_V
+
+/** NOTE: With a shunt resistance of 10mOhm and a shunt amplifier gain of 10V/V,
+ * that gives us +/-15A of current measuring which is mostly a reasonable range.  Sometimes
+ * the voltage output of the current shunt amplifier goes out of range, however, so 
+ * in the future I will just use the default current shunt. */
 
 #define SPI_CLOCK_SPEED_HZ_MAG 1000000
 
@@ -132,12 +155,18 @@ bool shut_down_power_fault_active = false;
 //  Encoder(int encA, int encB , int cpr, int index)
 //  - encA, encB    - encoder A and B pins
 //  - ppr           - impulses per rotation  (cpr=ppr*4)
-//  - index pin     - (optional input)
-Encoder encoder = Encoder(ENC_A, ENC_B, /*ENCODER_CPR*/ENCODER_PPR/*, ENC_Z*/);
+//  - index pin     - (optional) we don't use this since it only serves to slow
+//                    down the startup time when the initFOC function tries to find a 0.
+Encoder encoder = Encoder(ENC_A, ENC_B, ENCODER_PPR);
 
 BLDCMotor motor = BLDCMotor( NUM_OF_POLE_PAIRS );
 
 BLDCDriver6PWM driver = BLDCDriver6PWM(AH, AL, BH, BL, CH, CL, EN_GATE);
+
+
+
+
+/************* DRV8301: DRIVER: *************/
 
 /** NOTE: both driver and drv_ic classes have control over 
  * the EN_GATE, but the only time drv_ic uses it is on initialization. 
@@ -146,6 +175,10 @@ BLDCDriver6PWM driver = BLDCDriver6PWM(AH, AL, BH, BL, CH, CL, EN_GATE);
  * has control of the EN_GATE pin. */
 Drv8301 drv_ic = Drv8301(SPI_nCS_DRV, EN_GATE, nFAULT);
 
+
+
+
+/************* MAG: SENSE: *************/
 MagneticSensorSPIConfig_s AS5048A = {.spi_mode = SPI_MODE0, 
                                     .clock_speed = SPI_CLOCK_SPEED_HZ_MAG, 
                                     .bit_resolution = MAG_SNS_AS5048A_BIT_RES, 
@@ -157,8 +190,7 @@ MagneticSensorSPIConfig_s AS5048A = {.spi_mode = SPI_MODE0,
 MagneticSensorSPI mag_sense = MagneticSensorSPI(AS5048A, SPI_nCS_IO6);
 
 /** Params are: MOSI, MISO, SCLK, Chip select (optional). Chip select will be controlled 
- * by the calling function.
- */
+ * by the calling function. */
 SPIClass SPI_2(SPI_MOSI, SPI_MISO, SPI_SCK); 
 
 /** Note: SO1 is referenced to Phase B in HW, but in SW its references as Phase A.
@@ -168,11 +200,15 @@ LowsideCurrentSense current_sense = LowsideCurrentSense(SHUNT_RESISTANCE_OHMS,
                                                         SO2, 
                                                         SO1);
 
+
+
+
+/************* COMM: *************/
 HardwareSerial MySerial(GPIO4_UART_RX, GPIO3_UART_TX);
 
-STM32_CAN Can( CAN1, ALT );  //Use PB8/9 pins for CAN1.
-
 Commander command = Commander(MySerial);// commander interface
+
+STM32_CAN Can( CAN1, ALT );  //Use PB8/9 pins for CAN1.
 
 /** old filter values:  
  0.20657128726265578,
@@ -200,6 +236,8 @@ Biquad iq_sp_biquad = Biquad(0.136890606806f,
 
 
 
+
+ADC_HandleTypeDef my_hadc;
 
 
 
@@ -283,14 +321,14 @@ pdm_info_s spinny = {
   .pdm_theta_dot_filt = 0.0f, 
   .pdm_theta = 0.0f, 
   .pdm_phi = 0.0f,   
-  .exp_alpha_val = 0.05, // 0.25
+  .exp_alpha_val = 0.025, // old value is 0.05
 
   /** Swing-Up Controller: */
-  .K = 0.0001f, //0.0015f   // overall 
+  .K = 0.00001f, //0.0015f   // initial value 
   .A = 0.018f, //0.018f     // proportional to energy required to swing pendulum
+  .J = 0.0008f, // main value
   
   /** Swing-Down Controller: */
-  .J = -0.001f,
   .B = 0.02,
 
   /** Upright Controller: */
@@ -302,7 +340,7 @@ pdm_info_s spinny = {
   .D = 0.0f, // Print out pendulum info on serial if = 1
 
   .tau_prev = 0.0f, // used for setpoint iir
-  .tau_iir_alpha = 0.5f,
+  .tau_iir_alpha = 0.01f,
   .tau_ramp_rate_limit = 0.002f,
   .S = 1.0f, // 0 = no setpoint ramp/filtering, 1 = ramp, 2 = iir/exponential filter
 
@@ -443,64 +481,6 @@ void Update_IT_callback(void)
 
   float tmp_q_curr_req;
 
-  #if 0
-  switch(spinny.control.state)
-  {
-    case PDM_STATE_SWING_UP:
-      if(spinny.pdm_theta < spinny.control.H || spinny.pdm_theta > (_2PI - spinny.control.H))
-      {
-        tmp_q_curr_req = get_upright_setpoint();
-        spinny.control.state = PDM_STATE_UPRIGHT;
-      }
-      else 
-        tmp_q_curr_req = get_swing_up_setpoint();
-    break;
-
-    case PDM_STATE_UPRIGHT:
-      if(spinny.pdm_theta > spinny.control.P || spinny.pdm_theta < (_2PI - spinny.control.P))
-      {
-        tmp_q_curr_req = get_swing_down_setpoint();
-        spinny.control.state = PDM_STATE_SWING_DOWN;
-      }
-      else 
-        tmp_q_curr_req = get_upright_setpoint();
-    break;
-
-    case PDM_STATE_SWING_DOWN:
-      if(spinny.pdm_theta < 4.14f && spinny.pdm_theta > 2.14f
-      && spinny.control.swing_down_to_swing_up_cntr < 2500)
-      {
-        tmp_q_curr_req = 0;
-        spinny.control.swing_down_to_swing_up_cntr++;
-      }
-      else if(spinny.pdm_theta < 4.14f && spinny.pdm_theta > 2.14f
-      & spinny.control.swing_down_to_swing_up_cntr >= 2500)
-      {
-        tmp_q_curr_req = get_swing_up_setpoint();
-        spinny.control.state = PDM_STATE_SWING_UP;
-        spinny.control.swing_down_to_swing_up_cntr = 0;
-      }
-      else 
-        tmp_q_curr_req = get_swing_down_setpoint();
-    break;
-
-    default:
-      // do nothing
-    break;
-  }
-
-  if(spinny.pdm_theta < spinny.control.PH || spinny.pdm_theta > (_2PI - spinny.control.PH))
-  {
-    tmp_q_curr_req = get_upright_setpoint();
-    spinny.control.PH = spinny.control.P;
-  }
-  else 
-  {
-    tmp_q_curr_req = get_swing_up_setpoint();
-    spinny.control.PH = spinny.control.H;
-  }
-
-  #else 
   switch(spinny.control.state)
   {
     case PDM_STATE_INIT:
@@ -546,7 +526,7 @@ void Update_IT_callback(void)
           iq_sp_biquad.set_steady_state_val(tmp_q_curr_req);
 
         spinny.control.state = PDM_STATE_UPRIGHT;
-        spinny.K = 0.0025f;
+        spinny.K = spinny.J;
       }
       else 
       {
@@ -570,7 +550,6 @@ void Update_IT_callback(void)
       }
     break;
   }
-  #endif 
 
   #if 0
   if(spinny.S == 2.0f)
@@ -794,12 +773,12 @@ void setup()
 
   motor.LPF_velocity.Tf = 0.01f; 
 
-  motor.LPF_current_q.Tf = 0.004f; // old is 0.0005f
+  motor.LPF_current_q.Tf = 0.002f; // old is 0.004f
   motor.PID_current_q.P = 70.0f;  // old is 100
   motor.PID_current_q.I = 30.0f;  // old is 50
   motor.PID_current_q.D = 0.0f;
 
-  motor.LPF_current_d.Tf = 0.004f; // old is 0.001f
+  motor.LPF_current_d.Tf = 0.002f; // old is 0.004f
   motor.PID_current_d.P = 70.0f;  // old is 100
   motor.PID_current_d.I = 30.0f;   // old is 50
   motor.PID_current_d.D = 0.0f;
@@ -819,7 +798,7 @@ void setup()
   motor.linkCurrentSense(&current_sense);  // link motor and current sense
 
   drv_ic.link_spi_class(&SPI_2);
-  if(drv_ic.init(DRV8301_GainSetting_10_V_over_V) != true)
+  if(drv_ic.init(DRV8301_GAIN_SETTING) != true)
   {
     shut_down_power_fault_active = true;
 
@@ -858,11 +837,12 @@ void setup()
    * voltage limit is used to center the phase voltages. */
   motor.voltage_limit = 11.0f;
   motor.current_limit = 1.0f;  
-  motor.PID_current_d.limit = 11.0f;
-  motor.PID_current_q.limit = 11.0f; 
-
+  motor.PID_current_d.limit = 9.0f;
+  motor.PID_current_q.limit = 9.0f; 
+  
   command.add('M', on_motor,"my motor motion");
   command.add('C', on_constants,"Control Constants");
+  my_hadc.Instance = (ADC_TypeDef *)pinmap_peripheral(analogInputToPinName(SO1), PinMap_ADC);
 
   command.run();
   motor.monitor();
@@ -906,6 +886,20 @@ void loop()
     MySerial.print(encoder.getMechanicalAngle(), 6);
     MySerial.print("    ");
     MySerial.println(spinny.offset.median_phi_in_revolution, 6);
+  }
+  else if(spinny.D == 2.0f)
+  {
+    uint32_t test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_1);
+    MySerial.print(test); //
+    MySerial.print("    ");
+    test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_2);
+    MySerial.print(test);
+    MySerial.print("    ");
+    test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_2);
+    MySerial.print(test);
+    MySerial.print("    ");
+    test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_2);
+    MySerial.println(test);
   }
 
   

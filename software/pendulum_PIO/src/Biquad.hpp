@@ -3,7 +3,16 @@
 
 class Biquad {
 public:
-    Biquad(float a0_coeff, float a1_coeff, float a2_coeff, float b1_coeff, float b2_coeff) : a0_coeff_(a0_coeff), a1_coeff_(a1_coeff), a2_coeff_(a2_coeff), b1_coeff_(b1_coeff), b2_coeff_(b2_coeff) {}
+    Biquad(float a0_coeff, 
+            float a1_coeff, 
+            float a2_coeff, 
+            float b1_coeff, 
+            float b2_coeff) 
+        : a0_coeff_(a0_coeff), 
+          a1_coeff_(a1_coeff), 
+          a2_coeff_(a2_coeff), 
+          b1_coeff_(b1_coeff), 
+          b2_coeff_(b2_coeff) {}
 
     float a0_coeff_;
     float a1_coeff_;

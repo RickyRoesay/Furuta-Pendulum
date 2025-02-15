@@ -78,9 +78,13 @@ bool Drv8301::init(DRV8301_GainSetting_e requested_gain)
      * done once (not sure why)" -odrive devs 
      * 
      * This may have been specific to their 
-     * code base/board so I'm going to test that out for myself. */
+     * code base/board so I'm going to test that out for myself. 
+     * 
+     * EDIT: They were totally right :) the initial write does NOT take effect
+     * if it's only written once. I have not spent the time to dig any deeper on a 
+     * root cause/explaination.  This may even just be quirk of this IC. */
     bool wrote_regs = write_reg(kRegAddrControl1, new_config.control_register_1)
-                    #if 0
+                    #if 1
                     && write_reg(kRegAddrControl1, new_config.control_register_1)
                     && write_reg(kRegAddrControl1, new_config.control_register_1)
                     && write_reg(kRegAddrControl1, new_config.control_register_1)
