@@ -2,8 +2,13 @@
 #include "STM32_CAN.h"
 #include "../lib/Arduino-FOC/src/SimpleFOC.h"
 
-#include "DRV8301/drv8301.hpp"
+
+#include "DRV8301/drv8301.hpp" 
+
+#include "AS5048A_MagSenseSPI/AS5048A_MagSenseSPI.hpp" // mag sensor
+
 #include "../lib/Arduino-FOC/src/common/foc_utils.h" // sin, cosine, pi, 2pi, etc
+
 
 #include "Biquad.hpp"
 
@@ -15,78 +20,13 @@
 #define SIMPLEFOC_STM32_DEBUG
 #endif 
 
-
-/** adc counts reading:  */
-#if 0
-#include "../../../hardware_api.h"
-
-#include "../lib/Arduino-FOC/src/common/foc_utils.h"
-#include "../lib/Arduino-FOC/src/drivers/hardware_api.h"
-#include "../lib/Arduino-FOC/src/drivers/hardware_specific/stm32/stm32_mcu.h"
-#include "../../../hardware_api.h"
-#include "../stm32_mcu.h"
-#include "stm32f4_hal.h"
-#include "stm32f4_utils.h"
-#include "Arduino.h"
-#endif 
+#include "gpio.h"
 
 
 
 ////////////////////////// DEFINITIONS: ////////////////////////////
 
 #define ENABLE_SERIAL_DEBUG_OUTPUT
-
-#define	GPIO1	        PA0 // use this as uart4 tx
-#define	GPIO2	        PA1 // use this as uart4 rx
-#define	GPIO3_UART_TX	PA2
-#define	GPIO4_UART_RX	PA3
-
-#define	SPI_MOSI      PC12
-#define	SPI_MISO	    PC11
-#define	SPI_SCK	      PC10
-#define	SPI_nCS_IO6	  PB2
-#define	SPI_nCS_DRV	  PC13  // not confirmed
-
-#define	CAN_TX	      PB9   // not confirmed
-#define	CAN_RX	      PB8   // not confirmed
-
-#define	ENC_A	        PB4
-#define	ENC_B	        PB5
-#define	ENC_Z	        PC9
-
-#define	USB_DM	      PA11  // not confirmed
-#define	USB_DP	      PA12  // not confirmed
-
-#define	nFAULT	      PD2   // not confirmed
-#define	EN_GATE	      PB12
-#define	AH	          PA8
-#define	AL	          PB13
-#define	BH	          PA9
-#define	BL	          PB14
-#define	CH	          PA10
-#define	CL	          PB15
-
-#define	AUX_H	        PB11
-#define	AUX_L	        PB10
-
-/** Analog Inputs, not confirmed: */
-#define	SO1	          PC0
-#define	SO2	          PC1
-
-/** the "_ALT1" is for ADC2, and additionally "_ALT2" is for ADC3 */
-#define	M_TEMP	      PC5_ALT1
-#define	AUX_TEMP	    PA5_ALT1
-#define	VBUS_SNS	    PA6_ALT1
-
-/** this is an unused pin that corresponds to TIM3 when used as a 
- * timer pin via the HardwareTimer class.  We only need this to 
- * act as an interrupt generation source so we chose a pin that
- * is not connected to anything on the ODESC4.2 
- * 
- * NOTE: It is assumed that all "Motor1" (second instance of motors)
- * in the odrive 3.5 schematic have pins that are not connected to anything
- * on the ODESC4.2 */
-#define FLOATING_M1_CH_TIM3  PC8
 
 
 
@@ -98,23 +38,6 @@
 #define ENCODER_PPR 2048UL
 
 
-#define FAKE_AS5048A_SENSOR
-#ifdef FAKE_AS5048A_SENSOR
-/** Magnetic Sensor P/N is AS5048A.  Bit resolution is 14 
- * It has been observed that bit 14 always remains HIGH, or at least is always
- * read in SW to have that value.  For now, lets just set the angle start bit and resolution 
- * to be 13 bits */
-#define MAG_SNS_AS5048A_BIT_RES 13
-#define MAG_SNS_ANGLE_START_BIT_IDX 12 // use to be 13 before above issue was noticed
-#else
-#define MAG_SNS_AS5048A_BIT_RES 14
-#define MAG_SNS_ANGLE_START_BIT_IDX 13 
-#endif 
-
-#define MAG_SNS_ANGLE_REG_ADDR 0x3FFF
-#define MAG_SNS_PARITY_BIT_IDX 15
-#define MAG_SNS_nW_R_BIT_IDX 14
-
 
 
 /** Shunt Resistor Resistance in Ohms 
@@ -125,23 +48,13 @@
 
 /** Lowside Motor Current sensor gain. 
  * This can be changed via spi comms by writing to a reg, by default it's 10. */
-#define MOTOR_CURR_SNS_GAIN 40.0f 
-#define DRV8301_GAIN_SETTING DRV8301_GainSetting_40_V_over_V
+#define MOTOR_CURR_SNS_GAIN 80.0f 
+#define DRV8301_GAIN_SETTING DRV8301_GainSetting_80_V_over_V
 
 /** NOTE: With a shunt resistance of 10mOhm and a shunt amplifier gain of 10V/V,
  * that gives us +/-15A of current measuring which is mostly a reasonable range.  Sometimes
  * the voltage output of the current shunt amplifier goes out of range, however, so 
  * in the future I will just use the default current shunt. */
-
-#define SPI_CLOCK_SPEED_HZ_MAG 1000000
-
-
-
-
-
-
-
-
 
 
 
@@ -179,15 +92,7 @@ Drv8301 drv_ic = Drv8301(SPI_nCS_DRV, EN_GATE, nFAULT);
 
 
 /************* MAG: SENSE: *************/
-MagneticSensorSPIConfig_s AS5048A = {.spi_mode = SPI_MODE0, 
-                                    .clock_speed = SPI_CLOCK_SPEED_HZ_MAG, 
-                                    .bit_resolution = MAG_SNS_AS5048A_BIT_RES, 
-                                    .angle_register = MAG_SNS_ANGLE_REG_ADDR, 
-                                    .data_start_bit = MAG_SNS_ANGLE_START_BIT_IDX, 
-                                    .command_rw_bit = MAG_SNS_nW_R_BIT_IDX, 
-                                    .command_parity_bit = MAG_SNS_PARITY_BIT_IDX};
-
-MagneticSensorSPI mag_sense = MagneticSensorSPI(AS5048A, SPI_nCS_IO6);
+AS5048A_MagSenseSPI mag_sense = AS5048A_MagSenseSPI(SPI_nCS_IO6);
 
 /** Params are: MOSI, MISO, SCLK, Chip select (optional). Chip select will be controlled 
  * by the calling function. */
@@ -210,6 +115,68 @@ Commander command = Commander(MySerial);// commander interface
 
 STM32_CAN Can( CAN1, ALT );  //Use PB8/9 pins for CAN1.
 
+
+// channel A and B callbacks
+void doA() { encoder.handleA(); }
+void doB() { encoder.handleB(); }
+void doZ() { encoder.handleIndex(); }
+
+ADC_HandleTypeDef my_hadc;
+
+
+CAN_message_t CAN_TX_msg = {
+  .id = 0x040,
+  .len = 8,
+};
+
+
+typedef struct
+{
+  uint32_t first_bit:1;
+  uint32_t theta_dot:11;
+  uint32_t phi:8;
+  uint32_t theta:8;
+  uint32_t state:2;
+  uint32_t rc:2;
+} second_half_of_can_msg_bit;
+
+typedef union 
+{
+  second_half_of_can_msg_bit bit;
+  uint32_t all;
+} second_half_of_can_msg;
+
+
+
+void on_motor(char* cmd){ command.motor(&motor, cmd); }
+void on_constants(char* cmd);
+void send_can_control_debug_message(void);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////// PDM: /////////////////////////////////
+
 /** old filter values:  
  0.20657128726265578,
  0.41314257452531156
@@ -230,25 +197,6 @@ Biquad iq_sp_biquad = Biquad(0.136890606806f,
                             -0.780780215219f,
                              0.328342642443f);
 #endif 
-
-
-
-
-
-
-
-ADC_HandleTypeDef my_hadc;
-
-
-
-
-
-
-
-
-
-
-////////////////////////////////// DUMB: SHIT: /////////////////////////////////
 
 typedef enum
 {
@@ -321,7 +269,7 @@ pdm_info_s spinny = {
   .pdm_theta_dot_filt = 0.0f, 
   .pdm_theta = 0.0f, 
   .pdm_phi = 0.0f,   
-  .exp_alpha_val = 0.025, // old value is 0.05
+  .exp_alpha_val = 0.2, // old value is 0.025
 
   /** Swing-Up Controller: */
   .K = 0.00001f, //0.0015f   // initial value 
@@ -333,8 +281,8 @@ pdm_info_s spinny = {
 
   /** Upright Controller: */
   .I = -0.05f,//-0.05f    // overall
-  .L = -0.3f, //, -0.3, -0.23f, -0.25f   // theta dot
-  .M = 20.0f, //20.0f,    // phi
+  .L = -0.6f, //, -0.3, -0.23f, -0.25f   // theta dot
+  .M = 25.0f, //20.0f,    // phi
   .N = -1.5f, //-1.5f     // phi dot
 
   .D = 0.0f, // Print out pendulum info on serial if = 1
@@ -367,27 +315,6 @@ volatile uint32_t rolloverCompareCount = 0;
 HardwareTimer *MyTim;
 
 
-CAN_message_t CAN_TX_msg = {
-  .id = 0x040,
-  .len = 8,
-};
-
-
-typedef struct
-{
-  uint32_t first_bit:1;
-  uint32_t theta_dot:11;
-  uint32_t phi:8;
-  uint32_t theta:8;
-  uint32_t state:2;
-  uint32_t rc:2;
-} second_half_of_can_msg_bit;
-
-typedef union 
-{
-  second_half_of_can_msg_bit bit;
-  uint32_t all;
-} second_half_of_can_msg;
 
 
 
@@ -399,7 +326,18 @@ typedef union
 
 
 
-////////////////////////////////// FUNCTION: DEFINITIONS: /////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////// PDM: FUNCTION: DEFINITIONS: /////////////////////////////////
+
 
 float get_upright_setpoint(void)
 {
@@ -461,26 +399,24 @@ void Update_IT_callback(void)
   digitalWrite(GPIO2, HIGH); 
   
   mag_sense.update();
-
   /** update theta and phi values. */
   spinny.pdm_theta = spinny.offset.theta_offset - mag_sense.getMechanicalAngle();
   if(spinny.pdm_theta < 0.0f) spinny.pdm_theta+=_2PI;
   spinny.pdm_phi = spinny.pdm_theta;
   if(spinny.pdm_phi > _PI)
-    spinny.pdm_phi -= _2PI; 
-
+  spinny.pdm_phi -= _2PI; 
+  
   spinny.pdm_theta_dot_filt = (mag_sense.getVelocity() * spinny.exp_alpha_val) \
-                                + ((1.0-spinny.exp_alpha_val) * spinny.pdm_theta_dot_filt);
-
+  + ((1.0-spinny.exp_alpha_val) * spinny.pdm_theta_dot_filt);
+  
   if(spinny.offset.min_phi_in_revolution > spinny.pdm_phi)
-    spinny.offset.min_phi_in_revolution = spinny.pdm_phi;
-
+  spinny.offset.min_phi_in_revolution = spinny.pdm_phi;
+  
   if(spinny.offset.max_phi_in_revolution < spinny.pdm_phi)
-    spinny.offset.max_phi_in_revolution = spinny.pdm_phi;
-
-
+  spinny.offset.max_phi_in_revolution = spinny.pdm_phi;
+  
   float tmp_q_curr_req;
-
+  
   switch(spinny.control.state)
   {
     case PDM_STATE_INIT:
@@ -566,31 +502,7 @@ void Update_IT_callback(void)
   /** pack and send CAN msg */
   if(0)
   {
-    uint16_t tmp_bits = (uint16_t)((motor.current_sp * 1000.0f)+1024.0f);
-
-    CAN_TX_msg.buf[0] = (uint8_t)(tmp_bits & 0x00FF);
-    CAN_TX_msg.buf[1] = (uint8_t)((tmp_bits >> 8) & 0x0007);
-
-    tmp_bits = (uint16_t)((motor.current.q * 1000.0f)+1024.0f);
-    CAN_TX_msg.buf[1] |= (uint8_t)((tmp_bits & 0x001F) << 3);
-    CAN_TX_msg.buf[2] =  (uint8_t)((tmp_bits >> 5) & 0x003F);
-    tmp_bits = (uint16_t)((spinny.pdm_theta_dot_filt * 10.0f)+1024.0f);
-    CAN_TX_msg.buf[2] |=  (uint8_t)((tmp_bits & 0x0003) << 6);
-    CAN_TX_msg.buf[3]  =  (uint8_t)((tmp_bits >> 2));
-
-    second_half_of_can_msg tx_info;
-    tx_info.bit.first_bit = ((tmp_bits >> 10) & 0x0001);
-    tx_info.bit.theta_dot = (uint32_t)((motor.shaft_velocity * 10.0f)+1024.0f) & 0x000007FF;
-    tx_info.bit.theta = (uint32_t)((encoder.getMechanicalAngle()+3.2f) * 40.0f) & 0x000000FF;
-    tx_info.bit.phi = (uint32_t)((spinny.pdm_phi+3.2f) * 40.0) & 0x000000FF;
-    tx_info.bit.state = 0;
-    static uint32_t rolling_counter = 0;
-    tx_info.bit.rc = rolling_counter & 0x00000003;
-    tx_info.bit.state = spinny.control.state & 0x00000003;
-    rolling_counter++;
-    rolling_counter &= 0x00000003;
-    *(uint32_t*)&CAN_TX_msg.buf[4] = tx_info.all;
-    Can.write(CAN_TX_msg);
+    
   }
 
   motor.move(tmp_q_curr_req);
@@ -599,13 +511,22 @@ void Update_IT_callback(void)
   digitalWrite(GPIO2, LOW); 
 }
 
-// channel A and B callbacks
-void doA() { encoder.handleA(); }
-void doB() { encoder.handleB(); }
-void doZ() { encoder.handleIndex(); }
 
 
-void on_motor(char* cmd){ command.motor(&motor, cmd); }
+
+
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////// COMM: FUNCTIONS: THAT: NEED: SPINNY: /////////////////////////
+
 void on_constants(char* cmd)
 { 
   char cmd_idx1 = cmd[0];// parse command letter
@@ -697,6 +618,41 @@ void on_constants(char* cmd)
   }
 }
 
+void send_can_control_debug_message(void)
+{
+  uint16_t tmp_bits = (uint16_t)((motor.current_sp * 1000.0f)+1024.0f);
+
+    CAN_TX_msg.buf[0] = (uint8_t)(tmp_bits & 0x00FF);
+    CAN_TX_msg.buf[1] = (uint8_t)((tmp_bits >> 8) & 0x0007);
+
+    tmp_bits = (uint16_t)((motor.current.q * 1000.0f)+1024.0f);
+    CAN_TX_msg.buf[1] |= (uint8_t)((tmp_bits & 0x001F) << 3);
+    CAN_TX_msg.buf[2] =  (uint8_t)((tmp_bits >> 5) & 0x003F);
+    tmp_bits = (uint16_t)((spinny.pdm_theta_dot_filt * 10.0f)+1024.0f);
+    CAN_TX_msg.buf[2] |=  (uint8_t)((tmp_bits & 0x0003) << 6);
+    CAN_TX_msg.buf[3]  =  (uint8_t)((tmp_bits >> 2));
+
+    second_half_of_can_msg tx_info;
+    tx_info.bit.first_bit = ((tmp_bits >> 10) & 0x0001);
+    tx_info.bit.theta_dot = (uint32_t)((motor.shaft_velocity * 10.0f)+1024.0f) & 0x000007FF;
+    tx_info.bit.theta = (uint32_t)((encoder.getMechanicalAngle()+3.2f) * 40.0f) & 0x000000FF;
+    tx_info.bit.phi = (uint32_t)((spinny.pdm_phi+3.2f) * 40.0) & 0x000000FF;
+    tx_info.bit.state = 0;
+    static uint32_t rolling_counter = 0;
+    tx_info.bit.rc = rolling_counter & 0x00000003;
+    tx_info.bit.state = spinny.control.state & 0x00000003;
+    rolling_counter++;
+    rolling_counter &= 0x00000003;
+    *(uint32_t*)&CAN_TX_msg.buf[4] = tx_info.all;
+    Can.write(CAN_TX_msg);
+}
+
+
+
+
+
+
+
 
 
 
@@ -774,31 +730,30 @@ void setup()
   motor.LPF_velocity.Tf = 0.01f; 
 
   motor.LPF_current_q.Tf = 0.002f; // old is 0.004f
-  motor.PID_current_q.P = 70.0f;  // old is 100
-  motor.PID_current_q.I = 30.0f;  // old is 50
+  motor.PID_current_q.P = 12.0f;  // old is 70
+  motor.PID_current_q.I = 3.0f;  // old is 30
   motor.PID_current_q.D = 0.0f;
 
-  motor.LPF_current_d.Tf = 0.002f; // old is 0.004f
-  motor.PID_current_d.P = 70.0f;  // old is 100
-  motor.PID_current_d.I = 30.0f;   // old is 50
+  motor.LPF_current_d.Tf = 0.02f; // old is 0.004f
+  motor.PID_current_d.P = 2000.0f;  // old is 70
+  motor.PID_current_d.I = 600.0f;   // old is 30
   motor.PID_current_d.D = 0.0f;
 
   mag_sense.init(&SPI_2);  // init magnetic angle sensor
   mag_sense.update();
-
+  
   set_theta_offset_when_pointed_down();
-
+  
   encoder.init();
   encoder.enableInterrupts(doA,doB,doZ);
-
+  
   motor.linkSensor(&encoder);  // link motor and sensor
   driver.init();              // init driver
   motor.linkDriver(&driver);  // link motor and driver
   current_sense.linkDriver(&driver);  // link the driver with the current sense
   motor.linkCurrentSense(&current_sense);  // link motor and current sense
 
-  drv_ic.link_spi_class(&SPI_2);
-  if(drv_ic.init(DRV8301_GAIN_SETTING) != true)
+  if(drv_ic.init(DRV8301_GAIN_SETTING, &SPI_2) != true)
   {
     shut_down_power_fault_active = true;
 
@@ -936,18 +891,6 @@ void loop()
     spinny.offset.max_phi_in_revolution = -_2PI;
   }
 
-#if 0
-  if(spinny.control.state == PDM_STATE_RESET)
-  {
-    spinny.control.reset_loop_wait_cnt++;
-    if(spinny.control.reset_loop_wait_cnt >= 1000000)
-    {
-      spinny.control.reset_loop_wait_cnt = 0;
-      spinny.control.state = PDM_STATE_SWING_UP;
-      motor.enable();
-    }
-  }
-#endif 
   
   //digitalWrite(GPIO2, LOW);
 }

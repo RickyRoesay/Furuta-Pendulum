@@ -18,15 +18,14 @@
  * (DRV Datasheet Section 7.6.3.3) */
 #define OC_ADJ_SET_100A_25C 10
 
-void Drv8301::link_spi_class(SPIClass* spi)
+
+bool Drv8301::init(DRV8301_GainSetting_e requested_gain, SPIClass* spi) 
 {
+    
+    /*********** LINK SPI CLASS **********/
     spi_class_ptr = spi;
-}
 
-bool Drv8301::init(DRV8301_GainSetting_e requested_gain) 
-{
     /*********** SET CONTROL REGISTERS WITH THE REQUESTED GAIN VALUE **********/
-
     // for reference:
     // 10V/V on 500uOhm gives a range of +/- 300A
     // 20V/V on 500uOhm gives a range of +/- 150A
@@ -34,7 +33,6 @@ bool Drv8301::init(DRV8301_GainSetting_e requested_gain)
     // 80V/V on 500uOhm gives a range of +/- 37.5A
     // 10V/V on 10 mOhm gives a range of +/- 15A
     // 20V/V on 10 mOhm gives a range of +/- 7.5A
-
     RegisterFile new_config;
 
     /** Datasheet Section 7.6.3.2 */

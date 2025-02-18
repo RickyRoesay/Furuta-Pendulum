@@ -13,6 +13,9 @@
         "utility": "cpp",
         "random": "cpp",
         "numbers": "cpp",
-        "streambuf": "cpp"
+        "streambuf": "cpp",
+        "compare": "cpp",
+        "iosfwd": "cpp",
+        "limits": "cpp"
     }
 }

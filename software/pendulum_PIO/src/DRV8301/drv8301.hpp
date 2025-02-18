@@ -39,11 +39,11 @@ typedef enum : uint32_t {
 class Drv8301 {
 public:
 
+    /** The DC_CAL and OCTW pins are not connected to the MCU on the Odrive 3.5. 
+     * I'm assuming they are also not connected on the ODESC4.2 but haven't confirmed this. */
     Drv8301(int nCS_gpio, int EN_gpio, int nFAULT_gpio) : nCS_gpio_(nCS_gpio), EN_gpio_(EN_gpio), nFAULT_gpio_(nFAULT_gpio) {}
-
-    void link_spi_class(SPIClass* spi);
     
-    bool init(DRV8301_GainSetting_e requested_gain);
+    bool init(DRV8301_GainSetting_e requested_gain, SPIClass* spi);
 
     DRV8301_FaultType_e get_error();
 
@@ -59,7 +59,6 @@ private:
         kRegAddrControl1 = 2 << 11,  //!< Control Register 1
         kRegAddrControl2 = 3 << 11   //!< Control Register 2
     };
-
 
     struct RegisterFile {
         uint16_t control_register_1;
@@ -87,7 +86,6 @@ private:
     SPIClass* spi_class_ptr;
 
     SPISettings spi_settings; //!< SPI settings variable
-
 
     RegisterFile regs_; //!< Current configuration. If is_ready_ is
                         //!< true then this can be considered consistent
