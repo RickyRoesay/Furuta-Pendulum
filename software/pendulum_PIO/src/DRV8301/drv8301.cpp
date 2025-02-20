@@ -66,32 +66,22 @@ bool Drv8301::init(DRV8301_GainSetting_e requested_gain, SPIClass* spi)
     // the driver stages.
 
     digitalWrite(EN_gpio_, LOW);
-    delayMicroseconds(40); // mimumum pull-down time for full reset: 20us
+
+    /** Mimumum pull-down time for full reset: 20us (Datasheet Section 7.4.1)
+     * Double that for a reasonable amount of margin.  */
+    delayMicroseconds(40); 
     digitalWrite(EN_gpio_, HIGH);
-    delayMicroseconds(40);
+
+    /** As per datasheet section 6.8, the time it takes for SPI to be ready after EN_GATE
+     * transitions to HIGH is 5-10ms.  When reading SPI too soon after EN_GATE is driven high,
+     * the DRV8301's SDO output to the MCU will show that some of the faults have not cleared 
+     * yet.  This is likely why the original ODrive devs thought that you had to write to the 
+     * register multiple times to take effect. */
+    delayMicroseconds(10000);
 
     // Write current configuration
-
-    /** "the write operation tends to be ignored if only 
-     * done once (not sure why)" -odrive devs 
-     * 
-     * This may have been specific to their 
-     * code base/board so I'm going to test that out for myself. 
-     * 
-     * EDIT: They were totally right :) the initial write does NOT take effect
-     * if it's only written once. I have not spent the time to dig any deeper on a 
-     * root cause/explaination.  This may even just be quirk of this IC. */
-    bool wrote_regs = write_reg(kRegAddrControl1, new_config.control_register_1)
-                    #if 1
-                    && write_reg(kRegAddrControl1, new_config.control_register_1)
-                    && write_reg(kRegAddrControl1, new_config.control_register_1)
-                    && write_reg(kRegAddrControl1, new_config.control_register_1)
-                    && write_reg(kRegAddrControl1, new_config.control_register_1) 
-                    #endif
-                    && write_reg(kRegAddrControl2, new_config.control_register_2);
-    if (!wrote_regs) {
-        return false;
-    }
+    write_reg(kRegAddrControl1, new_config.control_register_1);
+    write_reg(kRegAddrControl2, new_config.control_register_2);
 
     // Wait for configuration to be applied
     delayMicroseconds(100);
@@ -148,6 +138,7 @@ bool Drv8301::read_reg(const RegAddr_e regName, uint16_t* data)
 
     delayMicroseconds(400);
     
+    // there's no real error management with the Arduino SPI library so just return true
     return true;
 }
 
@@ -165,5 +156,6 @@ bool Drv8301::write_reg(const RegAddr_e regName, const uint16_t data)
     
     delayMicroseconds(400);
 
+    // there's no real error management with the Arduino SPI library so just return true
     return true;
 }

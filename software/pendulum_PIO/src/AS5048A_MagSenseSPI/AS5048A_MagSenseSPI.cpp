@@ -157,6 +157,12 @@ bool AS5048A_MagSenseSPI::init(SPIClass* _spi)
 
   fault_status_on_startup.all = AS5048A_FLT__NO_ERRORS;
 
+  /** wait 10ms since the sensor seems to output incorrect 
+   * angle measurements right after it starts up after a power up, even through there 
+   * are no faults being reported and the offset calibration finished flag 
+   * is set HIGH when reading registers immediately after startup. */
+  delayMicroseconds(10000);
+
   /** simply clear the faults in case the AS5048A is faulted 
    * on startup.  If this does not clear the fault successfully 
    * then the fault_status variable will be set accordingly to the output 

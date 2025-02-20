@@ -9,6 +9,7 @@
 
 #include "../lib/Arduino-FOC/src/common/foc_utils.h" // sin, cosine, pi, 2pi, etc
 
+#include "CAN_TP/can_tp.hpp"
 
 #include "Biquad.hpp"
 
@@ -42,8 +43,8 @@
 
 /** Shunt Resistor Resistance in Ohms 
  * NOTE: 500uOhms is default for the ODESC 4.2, but i've replaced the value
- * with a 10mOhm shunt to get better resolution for the current levels the pendulum
- * will be running at. */
+ * with a 10mOhm shunt to get better resolution for the amperage the phases 
+ * will see in the GB54-2 gimbal motor. */
 #define SHUNT_RESISTANCE_OHMS 0.010f 
 
 /** Lowside Motor Current sensor gain. 
@@ -113,44 +114,21 @@ HardwareSerial MySerial(GPIO4_UART_RX, GPIO3_UART_TX);
 
 Commander command = Commander(MySerial);// commander interface
 
-STM32_CAN Can( CAN1, ALT );  //Use PB8/9 pins for CAN1.
-
 
 // channel A and B callbacks
 void doA() { encoder.handleA(); }
 void doB() { encoder.handleB(); }
-void doZ() { encoder.handleIndex(); }
+//void doZ() { encoder.handleIndex(); }
 
 ADC_HandleTypeDef my_hadc;
 
 
-CAN_message_t CAN_TX_msg = {
-  .id = 0x040,
-  .len = 8,
-};
 
-
-typedef struct
-{
-  uint32_t first_bit:1;
-  uint32_t theta_dot:11;
-  uint32_t phi:8;
-  uint32_t theta:8;
-  uint32_t state:2;
-  uint32_t rc:2;
-} second_half_of_can_msg_bit;
-
-typedef union 
-{
-  second_half_of_can_msg_bit bit;
-  uint32_t all;
-} second_half_of_can_msg;
 
 
 
 void on_motor(char* cmd){ command.motor(&motor, cmd); }
 void on_constants(char* cmd);
-void send_can_control_debug_message(void);
 
 
 
@@ -281,7 +259,7 @@ pdm_info_s spinny = {
 
   /** Upright Controller: */
   .I = -0.05f,//-0.05f    // overall
-  .L = -0.6f, //, -0.3, -0.23f, -0.25f   // theta dot
+  .L = -0.7f, //, -0.3, -0.23f, -0.25f   // theta dot
   .M = 25.0f, //20.0f,    // phi
   .N = -1.5f, //-1.5f     // phi dot
 
@@ -618,35 +596,6 @@ void on_constants(char* cmd)
   }
 }
 
-void send_can_control_debug_message(void)
-{
-  uint16_t tmp_bits = (uint16_t)((motor.current_sp * 1000.0f)+1024.0f);
-
-    CAN_TX_msg.buf[0] = (uint8_t)(tmp_bits & 0x00FF);
-    CAN_TX_msg.buf[1] = (uint8_t)((tmp_bits >> 8) & 0x0007);
-
-    tmp_bits = (uint16_t)((motor.current.q * 1000.0f)+1024.0f);
-    CAN_TX_msg.buf[1] |= (uint8_t)((tmp_bits & 0x001F) << 3);
-    CAN_TX_msg.buf[2] =  (uint8_t)((tmp_bits >> 5) & 0x003F);
-    tmp_bits = (uint16_t)((spinny.pdm_theta_dot_filt * 10.0f)+1024.0f);
-    CAN_TX_msg.buf[2] |=  (uint8_t)((tmp_bits & 0x0003) << 6);
-    CAN_TX_msg.buf[3]  =  (uint8_t)((tmp_bits >> 2));
-
-    second_half_of_can_msg tx_info;
-    tx_info.bit.first_bit = ((tmp_bits >> 10) & 0x0001);
-    tx_info.bit.theta_dot = (uint32_t)((motor.shaft_velocity * 10.0f)+1024.0f) & 0x000007FF;
-    tx_info.bit.theta = (uint32_t)((encoder.getMechanicalAngle()+3.2f) * 40.0f) & 0x000000FF;
-    tx_info.bit.phi = (uint32_t)((spinny.pdm_phi+3.2f) * 40.0) & 0x000000FF;
-    tx_info.bit.state = 0;
-    static uint32_t rolling_counter = 0;
-    tx_info.bit.rc = rolling_counter & 0x00000003;
-    tx_info.bit.state = spinny.control.state & 0x00000003;
-    rolling_counter++;
-    rolling_counter &= 0x00000003;
-    *(uint32_t*)&CAN_TX_msg.buf[4] = tx_info.all;
-    Can.write(CAN_TX_msg);
-}
-
 
 
 
@@ -716,8 +665,8 @@ void setup()
   motor.torque_controller = TorqueControlType::foc_current;
 
   /** set limits to a low value in case there are issues with FOC init */
-  driver.voltage_power_supply = 12.0f;
-  driver.voltage_limit = 12.0f; // this is only used for centering pwm phase voltages
+  driver.voltage_power_supply = 20.0f;
+  driver.voltage_limit = 20.0f; // this is only used for centering pwm phase voltages
   motor.voltage_limit = 4.0f;
   motor.current_limit = 1.0f;
 
@@ -745,7 +694,7 @@ void setup()
   set_theta_offset_when_pointed_down();
   
   encoder.init();
-  encoder.enableInterrupts(doA,doB,doZ);
+  encoder.enableInterrupts(doA,doB/**,doZ */);
   
   motor.linkSensor(&encoder);  // link motor and sensor
   driver.init();              // init driver
@@ -770,6 +719,8 @@ void setup()
     motor.monitor_downsample = 0; // downsampling, 0 = disabled to start
   #endif
 
+  can_tp_init();
+
   /** This will speed up the initialization of the motor during the "initFOC"
    * if the zero_electric_angle is set: */
   //motor.zero_electric_angle = 0.0f;
@@ -782,9 +733,6 @@ void setup()
 
   motor.move(0.0);
   motor.disable();
-  
-  Can.begin();
-  Can.setBaudRate(1000000);  //1000KBPS
 
   /** set each limit to an appropriate value now that the motor has been initialized.
    * NOTE: because we use FOC_Current based torque control, voltage_limit is not limiting control
@@ -849,12 +797,14 @@ void loop()
     MySerial.print("    ");
     test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_2);
     MySerial.print(test);
+    #if 0
     MySerial.print("    ");
     test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_2);
     MySerial.print(test);
     MySerial.print("    ");
     test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_2);
     MySerial.println(test);
+    #endif 
   }
 
   
