@@ -22,40 +22,10 @@
 #endif 
 
 #include "gpio.h"
-
-
+#include "config.hpp"
+#include "Gimbal/gimbal.hpp"
 
 ////////////////////////// DEFINITIONS: ////////////////////////////
-
-#define ENABLE_SERIAL_DEBUG_OUTPUT
-
-
-
-
-/** Number of pole pairs on the the GB54-1 is 7, config is 12n14p */
-#define NUM_OF_POLE_PAIRS 7
-
-/** Encoder Pulse/Counts per Revolution = 2048 AM103, default switch config */
-#define ENCODER_PPR 2048UL
-
-
-
-
-/** Shunt Resistor Resistance in Ohms 
- * NOTE: 500uOhms is default for the ODESC 4.2, but i've replaced the value
- * with a 10mOhm shunt to get better resolution for the amperage the phases 
- * will see in the GB54-2 gimbal motor. */
-#define SHUNT_RESISTANCE_OHMS 0.010f 
-
-/** Lowside Motor Current sensor gain. 
- * This can be changed via spi comms by writing to a reg, by default it's 10. */
-#define MOTOR_CURR_SNS_GAIN 80.0f 
-#define DRV8301_GAIN_SETTING DRV8301_GainSetting_80_V_over_V
-
-/** NOTE: With a shunt resistance of 10mOhm and a shunt amplifier gain of 10V/V,
- * that gives us +/-15A of current measuring which is mostly a reasonable range.  Sometimes
- * the voltage output of the current shunt amplifier goes out of range, however, so 
- * in the future I will just use the default current shunt. */
 
 
 
@@ -64,28 +34,16 @@
 
 //////////////////////////// CLASS: DECLARATIONS: ////////////////////////////
 
-bool shut_down_power_fault_active = false;
-
-//  Encoder(int encA, int encB , int cpr, int index)
-//  - encA, encB    - encoder A and B pins
-//  - ppr           - impulses per rotation  (cpr=ppr*4)
-//  - index pin     - (optional) we don't use this since it only serves to slow
-//                    down the startup time when the initFOC function tries to find a 0.
-Encoder encoder = Encoder(ENC_A, ENC_B, ENCODER_PPR);
-
-BLDCMotor motor = BLDCMotor( NUM_OF_POLE_PAIRS );
-
-BLDCDriver6PWM driver = BLDCDriver6PWM(AH, AL, BH, BL, CH, CL, EN_GATE);
 
 
 
 
 /************* DRV8301: DRIVER: *************/
 
-/** NOTE: both driver and drv_ic classes have control over 
+/** NOTE: both sw_bldc_driver and drv_ic classes have control over 
  * the EN_GATE, but the only time drv_ic uses it is on initialization. 
  * 
- * after the drv_ic's init function is called only the "driver" class
+ * after the drv_ic's init function is called only the "sw_bldc_driver" class
  * has control of the EN_GATE pin. */
 Drv8301 drv_ic = Drv8301(SPI_nCS_DRV, EN_GATE, nFAULT);
 
@@ -99,26 +57,15 @@ AS5048A_MagSenseSPI mag_sense = AS5048A_MagSenseSPI(SPI_nCS_IO6);
  * by the calling function. */
 SPIClass SPI_2(SPI_MOSI, SPI_MISO, SPI_SCK); 
 
-/** Note: SO1 is referenced to Phase B in HW, but in SW its references as Phase A.
- * Similary, SO2 is referenced as Phase C, but in software its reported as Phase B */
-LowsideCurrentSense current_sense = LowsideCurrentSense(SHUNT_RESISTANCE_OHMS, 
-                                                        MOTOR_CURR_SNS_GAIN, 
-                                                        SO2, 
-                                                        SO1);
-
 
 
 
 /************* COMM: *************/
-HardwareSerial MySerial(GPIO4_UART_RX, GPIO3_UART_TX);
+HardwareSerial hw_serial(GPIO4_UART_RX, GPIO3_UART_TX);
 
-Commander command = Commander(MySerial);// commander interface
+Commander command = Commander(hw_serial);// commander interface
 
 
-// channel A and B callbacks
-void doA() { encoder.handleA(); }
-void doB() { encoder.handleB(); }
-//void doZ() { encoder.handleIndex(); }
 
 ADC_HandleTypeDef my_hadc;
 
@@ -230,8 +177,6 @@ typedef struct
   float M; // K matrix coeff for pendulum phi (angle from upright)
   float N; // K matrix coeff for pendulum phi dot
 
-  
-
   float D; // Print out pendulum info on serial if = 1
 
   float tau_prev;
@@ -286,11 +231,7 @@ pdm_info_s spinny = {
   }
 };
 
-uint32_t channel;
-volatile uint32_t FrequencyMeasured, LastCapture = 0, CurrentCapture;
-uint32_t input_freq = 0;
-volatile uint32_t rolloverCompareCount = 0;
-HardwareTimer *MyTim;
+HardwareTimer *ctrl_loop_5kHz_timer;
 
 
 
@@ -412,7 +353,7 @@ void Update_IT_callback(void)
       /** If the offset is good, the pendulum will swing up by itself due to the 
        * innaccuracies of the position sensor + being right on top of the "kick"
        * area of the swing up controller.  This recalibrates the offset if
-       * the pendulum doesn't kick itself up after 2/5 seconds.  
+       * the pendulum doesn't kick itself up after 2 seconds.  
        * 
        * It has been noticed that after the motor calibrates, even if the end position 
        * of the pendulum is equally pointed down as when the mcu powers on, the offset
@@ -480,7 +421,13 @@ void Update_IT_callback(void)
   /** pack and send CAN msg */
   if(0)
   {
-    
+    send_can_Debug1_message(motor.current_sp,
+                            motor.current.q,
+                            spinny.pdm_theta_dot_filt,
+                            motor.shaft_velocity,
+                            spinny.pdm_phi,
+                            encoder.getMechanicalAngle(),
+                            0);
   }
 
   motor.move(tmp_q_curr_req);
@@ -517,78 +464,78 @@ void on_constants(char* cmd)
   switch(cmd_idx1){
     case 'E':      
       spinny.exp_alpha_val = value;
-      MySerial.print(F("exp filter alpha val set to: "));
-      MySerial.println(value);
+      hw_serial.print(F("exp filter alpha val set to: "));
+      hw_serial.println(value);
       break;
     case 'K':      
       spinny.K = value;
-      MySerial.print(F("K coeff set to: "));
-      MySerial.println(value);
+      hw_serial.print(F("K coeff set to: "));
+      hw_serial.println(value);
       break;
     case 'A':      
       spinny.A = value;
-      MySerial.print(F("A coeff set to: "));
-      MySerial.println(value);
+      hw_serial.print(F("A coeff set to: "));
+      hw_serial.println(value);
       break;
     case 'J':      
       spinny.J = value;
-      MySerial.print(F("J coeff set to: "));
-      MySerial.println(value);
+      hw_serial.print(F("J coeff set to: "));
+      hw_serial.println(value);
       break;
     case 'B':      
       spinny.B = value;
-      MySerial.print(F("B coeff set to: "));
-      MySerial.println(value);
+      hw_serial.print(F("B coeff set to: "));
+      hw_serial.println(value);
       break;
     case 'I':      
       spinny.I = value;
-      MySerial.print(F("I coeff set to: "));
-      MySerial.println(value);
+      hw_serial.print(F("I coeff set to: "));
+      hw_serial.println(value);
       break;
     case 'L':      
       spinny.L = value;
-      MySerial.print(F("L coeff set to: "));
-      MySerial.println(value);
+      hw_serial.print(F("L coeff set to: "));
+      hw_serial.println(value);
       break;
     case 'M':      
       spinny.M = value;
-      MySerial.print(F("M coeff set to: "));
-      MySerial.println(value);
+      hw_serial.print(F("M coeff set to: "));
+      hw_serial.println(value);
       break;
     case 'N':      
       spinny.N = value;
-      MySerial.print(F("N coeff set to: "));
-      MySerial.println(value);
+      hw_serial.print(F("N coeff set to: "));
+      hw_serial.println(value);
       break;
     case 'P':      
       spinny.control.P = value;
-      MySerial.print(F("P coeff set to: "));
-      MySerial.println(value);
+      hw_serial.print(F("P coeff set to: "));
+      hw_serial.println(value);
       break;
     case 'H':      
       spinny.control.H = value;
-      MySerial.print(F("H coeff set to: "));
-      MySerial.println(value);
+      hw_serial.print(F("H coeff set to: "));
+      hw_serial.println(value);
       break;
     case 'T':      
       spinny.tau_iir_alpha = value;
-      MySerial.print(F("Tau exp filt alpha coeff set to: "));
-      MySerial.println(value);
+      hw_serial.print(F("Tau exp filt alpha coeff set to: "));
+      hw_serial.println(value);
       break;
     case 'R':      
       spinny.tau_ramp_rate_limit = value;
-      MySerial.print(F("Tau exp filt alpha coeff set to: "));
-      MySerial.println(value);
+      hw_serial.print(F("Tau exp filt alpha coeff set to: "));
+      hw_serial.println(value);
       break;
     case 'S':      
       spinny.S = value;
-      MySerial.print(F("Tau ramp/filt setting set to: "));
-      MySerial.println(value);
+      hw_serial.print(F("Tau ramp/filt setting set to: "));
+      hw_serial.println(value);
       break;
     case 'D':      
       spinny.D = value;
-      MySerial.print(F("Debug info flag set to: "));
-      MySerial.println(value);
+      hw_serial.print(F("Debug info flag set to: "));
+      hw_serial.println(value);
       break;
     default:
       // do nothing
@@ -619,11 +566,9 @@ void on_constants(char* cmd)
 
 void setup() 
 {
-  #ifdef ENABLE_SERIAL_DEBUG_OUTPUT
-    MySerial.begin(250000); //115200
-  #endif
+  hw_serial.begin(250000); //115200
 
-  #if 0 /** this is set up and used by the MySerial class (uart/serial) */
+  #if 0 /** this is set up and used by the hw_serial class (uart/serial) */
   pinMode(GPIO3_UART_TX, INPUT);
   pinMode(GPIO4_UART_RX, INPUT);
   #endif 
@@ -634,11 +579,11 @@ void setup()
 
   // Automatically retrieve TIM instance and channel associated to FLOATING_M1_CH_TIM3
   TIM_TypeDef *Instance = (TIM_TypeDef *)pinmap_peripheral(digitalPinToPinName(FLOATING_M1_CH_TIM3), PinMap_PWM);
-  MyTim = new HardwareTimer(Instance);
+  ctrl_loop_5kHz_timer = new HardwareTimer(Instance);
 
   /** Prescaler is automatically set when setting overflow with format != tick */
-  MyTim->setOverflow(200UL, MICROSEC_FORMAT);
-  MyTim->attachInterrupt(Update_IT_callback);
+  ctrl_loop_5kHz_timer->setOverflow(200UL, MICROSEC_FORMAT);
+  ctrl_loop_5kHz_timer->attachInterrupt(Update_IT_callback);
 
   pinMode(SPI_nCS_DRV, OUTPUT);
   digitalWrite(SPI_nCS_DRV, HIGH);
@@ -660,97 +605,37 @@ void setup()
   pinMode(M_TEMP,   INPUT);
   pinMode(AUX_TEMP, INPUT);
   pinMode(VBUS_SNS, INPUT);
+  
 
-  motor.controller = MotionControlType::torque;
-  motor.torque_controller = TorqueControlType::foc_current;
 
-  /** set limits to a low value in case there are issues with FOC init */
-  driver.voltage_power_supply = 20.0f;
-  driver.voltage_limit = 20.0f; // this is only used for centering pwm phase voltages
-  motor.voltage_limit = 4.0f;
-  motor.current_limit = 1.0f;
+  if(drv_ic.init(DRV8301_GAIN_SETTING, &SPI_2) != true)
+  {
+    hw_serial.println("Failed to set gain settings for DRV8301!");
 
-  /** NOTE: low pass filter implementation can be found by ctrl+shift+f this:
-   * LowPassFilter::operator() 
-   * 
-   * The LPF is an exponential filter with an alpha value of .tf/(.tf + dt) 
-   * so it is a function of time delta between sensor readings */
-
-  motor.LPF_velocity.Tf = 0.01f; 
-
-  motor.LPF_current_q.Tf = 0.002f; // old is 0.004f
-  motor.PID_current_q.P = 12.0f;  // old is 70
-  motor.PID_current_q.I = 3.0f;  // old is 30
-  motor.PID_current_q.D = 0.0f;
-
-  motor.LPF_current_d.Tf = 0.02f; // old is 0.004f
-  motor.PID_current_d.P = 2000.0f;  // old is 70
-  motor.PID_current_d.I = 600.0f;   // old is 30
-  motor.PID_current_d.D = 0.0f;
+    /** return early, do not control the motor! */
+    return;
+  }
 
   mag_sense.init(&SPI_2);  // init magnetic angle sensor
   mag_sense.update();
   
   set_theta_offset_when_pointed_down();
   
-  encoder.init();
-  encoder.enableInterrupts(doA,doB/**,doZ */);
-  
-  motor.linkSensor(&encoder);  // link motor and sensor
-  driver.init();              // init driver
-  motor.linkDriver(&driver);  // link motor and driver
-  current_sense.linkDriver(&driver);  // link the driver with the current sense
-  motor.linkCurrentSense(&current_sense);  // link motor and current sense
-
-  if(drv_ic.init(DRV8301_GAIN_SETTING, &SPI_2) != true)
-  {
-    shut_down_power_fault_active = true;
-
-    #ifdef ENABLE_SERIAL_DEBUG_OUTPUT
-      MySerial.println("Failed to set gain settings for DRV8301!!!!!");
-    #endif
-
-    return;
-  }
-
-  #ifdef ENABLE_SERIAL_DEBUG_OUTPUT
-    motor.useMonitoring(MySerial); 
-    motor.monitor_variables = _MON_TARGET | _MON_VOLT_Q | _MON_VOLT_D | _MON_CURR_Q | _MON_CURR_D | _MON_VEL | _MON_ANGLE; 
-    motor.monitor_downsample = 0; // downsampling, 0 = disabled to start
-  #endif
-
   can_tp_init();
 
-  /** This will speed up the initialization of the motor during the "initFOC"
-   * if the zero_electric_angle is set: */
-  //motor.zero_electric_angle = 0.0f;
-
-  motor.init();  // init motor
-  current_sense.init();  // init current sense
-  motor.initFOC(); // align encoder and start FOC
+  gimbal_init(hw_serial);
 
   iq_sp_biquad.set_steady_state_val(0.0f);
 
-  motor.move(0.0);
-  motor.disable();
-
-  /** set each limit to an appropriate value now that the motor has been initialized.
-   * NOTE: because we use FOC_Current based torque control, voltage_limit is not limiting control
-   * of the motor, but we will set driver and motor voltage limit for clarity.  Driver 
-   * voltage limit is used to center the phase voltages. */
-  motor.voltage_limit = 11.0f;
-  motor.current_limit = 1.0f;  
-  motor.PID_current_d.limit = 9.0f;
-  motor.PID_current_q.limit = 9.0f; 
-  
   command.add('M', on_motor,"my motor motion");
   command.add('C', on_constants,"Control Constants");
+  
   my_hadc.Instance = (ADC_TypeDef *)pinmap_peripheral(analogInputToPinName(SO1), PinMap_ADC);
 
   command.run();
   motor.monitor();
   
-  MyTim->resume();
+  ctrl_loop_5kHz_timer->resume();
 
   motor.enable();
 }
@@ -780,30 +665,30 @@ void loop()
 
   if(spinny.D == 1.0f)
   {
-    MySerial.print(spinny.pdm_phi, 6); //
-    MySerial.print("    ");
-    MySerial.print(spinny.pdm_theta_dot_filt, 6);
-    MySerial.print("    ");
-    MySerial.print(encoder.getVelocity(), 6);
-    MySerial.print("    ");
-    MySerial.print(encoder.getMechanicalAngle(), 6);
-    MySerial.print("    ");
-    MySerial.println(spinny.offset.median_phi_in_revolution, 6);
+    hw_serial.print(spinny.pdm_phi, 6); //
+    hw_serial.print("    ");
+    hw_serial.print(spinny.pdm_theta_dot_filt, 6);
+    hw_serial.print("    ");
+    hw_serial.print(encoder.getVelocity(), 6);
+    hw_serial.print("    ");
+    hw_serial.print(encoder.getMechanicalAngle(), 6);
+    hw_serial.print("    ");
+    hw_serial.println(spinny.offset.median_phi_in_revolution, 6);
   }
   else if(spinny.D == 2.0f)
   {
     uint32_t test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_1);
-    MySerial.print(test); //
-    MySerial.print("    ");
+    hw_serial.print(test); //
+    hw_serial.print("    ");
     test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_2);
-    MySerial.print(test);
+    hw_serial.print(test);
     #if 0
-    MySerial.print("    ");
+    hw_serial.print("    ");
     test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_2);
-    MySerial.print(test);
-    MySerial.print("    ");
+    hw_serial.print(test);
+    hw_serial.print("    ");
     test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_2);
-    MySerial.println(test);
+    hw_serial.println(test);
     #endif 
   }
 

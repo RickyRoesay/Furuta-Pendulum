@@ -92,12 +92,16 @@ bool Drv8301::init(DRV8301_GainSetting_e requested_gain, SPIClass* spi)
         return false;
     }
 
-    if (get_error() != DRV8301_FaultType_NoFault) {
+    if (get_error() != DRV8301_FaultType_NoFault) 
+    {
+        /** Disable the device and return 0 */    
+        digitalWrite(EN_gpio_, LOW);
         return false;
     }
 
     return true;
 }
+
 
 DRV8301_FaultType_e Drv8301::get_error() {
     uint16_t fault1, fault2;
