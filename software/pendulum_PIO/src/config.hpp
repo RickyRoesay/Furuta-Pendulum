@@ -10,9 +10,13 @@
 #define SW_BLDC_DRV__V_LIMIT 20.0f // this is only used for centering pwm phase voltages
 
 /** set "pre foc init" limits to a low value in case there are issues 
- * with the HW before/during FOC init. */
-#define MOTOR__V_LIMIT_PRE_FOC_INIT 4.0f
-#define MOTOR__V_LIMIT_POST_FOC_INIT 11.0f
+ * with the HW before/during FOC init. 
+ * NOTE: If MOTOR__V_LIMIT_PRE_FOC_INIT is < 3V, it will limit motor.voltage_sensor_align
+ * voltage value from the default of 3.0 volts.  However,
+ * with this motor we don't need to bother going below 3 volts during 
+ * sensor alignment to the d axis.  */
+#define MOTOR__V_LIMIT_PRE_FOC_INIT 4.0f 
+#define MOTOR__V_LIMIT_POST_FOC_INIT 9.0f
 #define MOTOR__I_LIMIT_PRE_FOC_INIT 1.0f
 #define MOTOR__I_LIMIT_POST_FOC_INIT 1.0f
 
@@ -27,13 +31,13 @@
 #define MOTOR__Q_CURR_PID_P_GAIN    12.0f      // old is 70
 #define MOTOR__Q_CURR_PID_I_GAIN    3.0f       // old is 30
 #define MOTOR__Q_CURR_PID_D_GAIN    0.0f
-#define MOTOR__Q_CURR_PID_SAT_LIMIT 9.0f        // this is in units of voltage
+#define MOTOR__Q_CURR_PID_SAT_LIMIT     MOTOR__V_LIMIT_POST_FOC_INIT  // this is in units of voltage
 
 #define MOTOR__D_CURR_MEAS_FILT_TF  0.02f       // old is 0.004f
 #define MOTOR__D_CURR_PID_P_GAIN    2000.0f     // old is 70
 #define MOTOR__D_CURR_PID_I_GAIN    600.0f      // old is 30
 #define MOTOR__D_CURR_PID_D_GAIN    0.0f
-#define MOTOR__D_CURR_PID_SAT_LIMIT 9.0f        // this is in units of voltage
+#define MOTOR__D_CURR_PID_SAT_LIMIT     MOTOR__V_LIMIT_POST_FOC_INIT   // this is in units of voltage
 
 /** To speed up startup time by over a second, we can
  * skip the pole pair, minimum movement, and direction checks 

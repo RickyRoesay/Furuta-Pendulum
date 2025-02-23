@@ -57,13 +57,11 @@ void gimbal_init(Print &print)
     motor.PID_current_q.P = MOTOR__Q_CURR_PID_P_GAIN;  // old is 70
     motor.PID_current_q.I = MOTOR__Q_CURR_PID_I_GAIN;  // old is 30
     motor.PID_current_q.D = MOTOR__Q_CURR_PID_D_GAIN;
-    motor.PID_current_q.limit = MOTOR__Q_CURR_PID_SAT_LIMIT;   
-  
+    
     motor.LPF_current_d.Tf = MOTOR__D_CURR_MEAS_FILT_TF; // old is 0.004f
     motor.PID_current_d.P = MOTOR__D_CURR_PID_P_GAIN;  // old is 70
     motor.PID_current_d.I = MOTOR__D_CURR_PID_I_GAIN;   // old is 30
     motor.PID_current_d.D = MOTOR__D_CURR_PID_D_GAIN;
-    motor.PID_current_d.limit = MOTOR__D_CURR_PID_SAT_LIMIT;
     
     encoder.init();
     encoder.enableInterrupts(doA,doB);
@@ -73,20 +71,20 @@ void gimbal_init(Print &print)
     motor.linkDriver(&sw_bldc_driver);  // link motor and sw_bldc_driver
     current_sense.linkDriver(&sw_bldc_driver);  // link the sw_bldc_driver with the current sense
     motor.linkCurrentSense(&current_sense);  // link motor and current sense
-  
+    
     motor.useMonitoring(print); 
     motor.monitor_variables = _MON_TARGET | _MON_VOLT_Q | _MON_VOLT_D | _MON_CURR_Q | _MON_CURR_D | _MON_VEL | _MON_ANGLE; 
     motor.monitor_downsample = 0; // downsampling, 0 = disabled to start
-  
+    
     /** Depending on if SKIP_POLE_PAIR_AND_DIRECTION_CHECKS is 
      * defined in config.hpp, this will speed up the initialization of the 
      * motor during the "initFOC" if the direction is set beforehand: */
     motor.sensor_direction = MOTOR__SENSOR_DIRECTION;
-  
+    
     motor.init();  // init motor
     current_sense.init();  // init current sense
     motor.initFOC(); // align encoder and start FOC
-  
+    
     motor.move(0.0);
     motor.disable();
     
@@ -96,6 +94,23 @@ void gimbal_init(Print &print)
      * voltage limit is used to center the phase voltages. */
     motor.voltage_limit = MOTOR__V_LIMIT_POST_FOC_INIT;
     motor.current_limit = MOTOR__I_LIMIT_POST_FOC_INIT;  
+    
+    /** NOTE: PID current D and Q saturation limit values
+     *  need to be set after the init function call of the motor class 
+     * if the alignment voltage needs to be less than the default of 3V 
+     * (set by DEF_VOLTAGE_SENSOR_ALIGN in defaults.h file).  
+     * 
+     * If the motor.voltage_limit is < DEF_VOLTAGE_SENSOR_ALIGN at the time 
+     * of calling motor.init(), motor.voltage_sensor_align will be 
+     * limited to motor.voltage_limit.  Thus, in this implementation,
+     * to make the alignment voltage < 3V, we write a lower value of a voltage init
+     * before calling motor.init.print
+     * 
+     * Once motor.init is done, to set the dq current PID saturation limit values 
+     * higher than the "voltage_limit" at the time of calling the function,
+     * we must set them afterwards. */
+    motor.PID_current_d.limit = MOTOR__D_CURR_PID_SAT_LIMIT;
+    motor.PID_current_q.limit = MOTOR__Q_CURR_PID_SAT_LIMIT;   
 }
 
 

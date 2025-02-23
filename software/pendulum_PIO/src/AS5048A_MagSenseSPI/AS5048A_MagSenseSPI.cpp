@@ -115,7 +115,7 @@ uint16_t inline AS5048A_MagSenseSPI::getFaultTypeFromRegData(uint16_t err_flags_
    * "#if" code should be faster unless the optimized compiler is alarmingly good.
    * I haven't looked at the compiled assembly of the both implementations
    * so I don't know for sure. */
-  #if 0
+  #if 1
   ErrFlags_u tmp_err_flags;
   tmp_err_flags.raw = err_flags_reg_data;
   
@@ -131,8 +131,15 @@ uint16_t inline AS5048A_MagSenseSPI::getFaultTypeFromRegData(uint16_t err_flags_
   tmp_fault_rtn_val.bit.cordic_overflow = tmp_diag_ags.bit.cordis_ovf_COF;
   tmp_fault_rtn_val.bit.offset_comp_unfinished = !tmp_diag_ags.bit.offset_comp_finished_OCF;
   #else 
-  tmp_fault_rtn_val.raw = (diag_ags_reg_data & ERROR_FLAGS_REG_BIT_MASK);
-  tmp_fault_rtn_val.raw |= (err_flags_reg_data & DIAG_AGS_WARNINGS_BIT_MASK) >> DIAG_AGS_REG_ALIGN_TO_FAULT_R_SHIFT_NUM;
+  /** NOTE: This doesn't work and throws false bugs.  I'll come back to 
+   * this when I optimize control loop execution timing. */
+  tmp_fault_rtn_val.raw = (err_flags_reg_data & ERROR_FLAGS_REG_BIT_MASK);
+
+  tmp_fault_rtn_val.raw |= (diag_ags_reg_data & DIAG_AGS_COF_AND_COMP_ERR_ANTI_BIT_MASK) >> DIAG_AGS_REG_ALIGN_TO_FAULT_R_SHIFT_NUM;
+  diag_ags_reg_data &= DIAG_AGS_OFC_BIT_MASK;
+  if(!diag_ags_reg_data)
+    tmp_fault_rtn_val.bit.offset_comp_unfinished = 1;
+
   #endif 
 
   return tmp_fault_rtn_val.raw;
@@ -218,7 +225,7 @@ bool AS5048A_MagSenseSPI::init(SPIClass* _spi)
     fault_status_on_startup.raw |= getFaultTypeFromRegData(reg_data_on_startup.err_flags.raw, 
                                                           reg_data_on_startup.diag_ags.raw);
   }
-
+  
   fault_memory.raw = fault_status_on_startup.raw;
 
   if(fault_status_on_startup.raw == AS5048A_FLT__NO_ERRORS)
@@ -272,7 +279,7 @@ float AS5048A_MagSenseSPI::getSensorAngle()
       tmp_angle_rtn_val = getAngleInRadiansFromRawCounts(reg_data_angle.bit.angle_data);
     }
       
-    fault_status.raw |= getFaultTypeFromRegData(reg_data_err_flags.raw, reg_data_diag_ags.raw);
+    fault_status.raw |= getFaultTypeFromRegData(reg_data_err_flags.raw, reg_data_diag_ags.raw); //suspect
   }
   else
   {

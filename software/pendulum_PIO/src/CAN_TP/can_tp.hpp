@@ -12,13 +12,13 @@ void can_tp_init(void);
 
 
 /** Packs and sendsthe CAN message "Debug1" from the DBC. */
-void inline send_can_Debug1_message(float q_curr_sp, 
-                                    float q_curr_fb, 
-                                    float phi_dot, 
-                                    float theta_dot,
-                                    float phi, 
-                                    float theta,
-                                    uint16_t state);
+void send_can_Debug1_message(float q_curr_sp, 
+                            float q_curr_fb, 
+                            float phi_dot, 
+                            float theta_dot,
+                            float phi, 
+                            float theta,
+                            uint16_t state);
 
 
 

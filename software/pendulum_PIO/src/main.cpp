@@ -204,7 +204,7 @@ pdm_info_s spinny = {
 
   /** Upright Controller: */
   .I = -0.05f,//-0.05f    // overall
-  .L = -0.7f, //, -0.3, -0.23f, -0.25f   // theta dot
+  .L = -0.9f, //, -0.3, -0.23f, -0.25f   // theta dot
   .M = 25.0f, //20.0f,    // phi
   .N = -1.5f, //-1.5f     // phi dot
 
@@ -591,6 +591,12 @@ void setup()
   pinMode(SPI_nCS_IO6, OUTPUT);
   digitalWrite(SPI_nCS_IO6, HIGH);
 
+  /** The Gate enable pin's pinmode will get overridden with the same 
+   * value when the "sw_bldc_driver" has it's init function
+   * called. */
+  pinMode(EN_GATE, OUTPUT);
+  digitalWrite(EN_GATE, LOW);
+
   pinMode(nFAULT, INPUT);
 
   pinMode(AUX_H, OUTPUT); 
@@ -606,8 +612,19 @@ void setup()
   pinMode(AUX_TEMP, INPUT);
   pinMode(VBUS_SNS, INPUT);
   
+  // init magnetic angle sensor
+  if(mag_sense.init(&SPI_2) != true)
+  {
+    hw_serial.println("Failed to initialized AS5048A Mag Sensor!");
 
-
+    /** return early, do not control the motor! */
+    return;
+  }
+  
+  mag_sense.update();
+  set_theta_offset_when_pointed_down();
+  
+  
   if(drv_ic.init(DRV8301_GAIN_SETTING, &SPI_2) != true)
   {
     hw_serial.println("Failed to set gain settings for DRV8301!");
@@ -616,10 +633,7 @@ void setup()
     return;
   }
 
-  mag_sense.init(&SPI_2);  // init magnetic angle sensor
-  mag_sense.update();
-  
-  set_theta_offset_when_pointed_down();
+
   
   can_tp_init();
 
@@ -658,10 +672,8 @@ void loop()
 {
   //digitalWrite(GPIO2, HIGH); 
 
-  #ifdef ENABLE_SERIAL_DEBUG_OUTPUT
-    command.run();
-    motor.monitor();
-  #endif 
+  command.run();
+  motor.monitor();
 
   if(spinny.D == 1.0f)
   {
