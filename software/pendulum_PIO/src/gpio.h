@@ -45,7 +45,7 @@
 /** the "_ALT1" is for ADC2, and additionally "_ALT2" is for ADC3 */
 #define	M_TEMP	      PC5_ALT1
 #define	AUX_TEMP	    PA5_ALT1
-#define	VBUS_SNS	    PA6_ALT1
+#define	VBUS_SNS	   PA6  // PA6_ALT1
 
 /** this is an unused pin that corresponds to TIM3 when used as a 
  * timer pin via the HardwareTimer class.  We only need this to 
