@@ -11,8 +11,8 @@ public:
         : a0_coeff_(a0_coeff), 
           a1_coeff_(a1_coeff), 
           a2_coeff_(a2_coeff), 
-          b1_coeff_(b1_coeff), 
-          b2_coeff_(b2_coeff) {}
+          b1_coeff_(-b1_coeff), 
+          b2_coeff_(-b2_coeff) {}
 
     float a0_coeff_;
     float a1_coeff_;
@@ -37,7 +37,11 @@ public:
     inline float update_and_return_filt_value(float latest_meas)
     {
         x_n[0] = latest_meas;
-        y_n[0] = (a0_coeff_ * x_n[0]) + (a1_coeff_ * x_n[1]) + (a2_coeff_ * x_n[2]) + (b1_coeff_ * y_n[1]) + (b2_coeff_ * y_n[2]);
+        y_n[0] = (a0_coeff_ * x_n[0]);
+        y_n[0] += (a1_coeff_ * x_n[1]);
+        y_n[0] += (a2_coeff_ * x_n[2]);
+        y_n[0] += (b1_coeff_ * y_n[1]);
+        y_n[0] += (b2_coeff_ * y_n[2]);
         x_n[2] = x_n[1];
         x_n[1] = x_n[0];
         y_n[2] = y_n[1];

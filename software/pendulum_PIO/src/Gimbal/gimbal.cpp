@@ -89,7 +89,7 @@ void gimbal_init(Print &print)
     motor.disable();
     
     /** set each limit to an appropriate value now that the motor has been initialized.
-     * NOTE: because we use FOC_Current based torque control, voltage_limit is not limiting control
+     * NOTE: because we use FOC_Current based torque control, sw_bldc_driver.voltage_limit is not limiting control
      * of the motor, but we will set sw_bldc_driver and motor voltage limit for clarity.  sw_bldc_driver 
      * voltage limit is used to center the phase voltages. */
     motor.voltage_limit = MOTOR__V_LIMIT_POST_FOC_INIT;

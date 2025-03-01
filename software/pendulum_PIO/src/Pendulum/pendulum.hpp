@@ -51,11 +51,7 @@ typedef struct
 
   float K; // final swingup coeff
   float A; // energy proportional coeff for swingup
-  float C;
 
-  
-  float J; // final swingdown coeff
-  float B; // energy proportional coeff for swingdown
 
   float I; // final upright coeff
   float L; // K matrix coeff for motor theta dot
@@ -67,14 +63,10 @@ typedef struct
   float tau_prev;
   float tau_iir_alpha;
   float tau_ramp_rate_limit;
-  float S; // 0 = no setpoint ramp/filtering, 1 = ramp, 2 = iir/exponential filter
 
   pdm_offset_s offset;
   pdm_control_s control;
 } pdm_info_s;
-
-
-
 
 extern pdm_info_s pdm;
 
@@ -84,18 +76,30 @@ extern AS5048A_MagSenseSPI mag_sense;
 extern HardwareSerial hw_serial;
 extern Commander command;
 
+extern Biquad pdm_torque_setpoint_biquad_c;
+
+
+/////////////////////////////////// CONTROL: FUNCTIONS: ///////////////////////////////////
+int pdm_run_control_loop(void);
+
+
+float pdm_get_upright_setpoint(void);
+
+float pdm_get_swing_up_setpoint(void);
+
+float pdm_get_swing_down_setpoint(void);
+
+
+/////////////////////////////////// COMM: FUNCTIONS: ///////////////////////////////////
+void pdm_on_constants(char* cmd);
 
 
 
 
-void on_constants(char* cmd);
+void pdm_set_theta_offset_when_pointed_down(void);
+void pdm_set_theta_offset_when_pointed_up(void);
+void pdm_set_theta_offset_when_free_spinning(float median_phi);
 
-float get_upright_setpoint(void);
-float get_swing_up_setpoint(void);
-float get_swing_down_setpoint(void);
-void set_theta_offset_when_pointed_down(void);
-void set_theta_offset_when_pointed_up(void);
-void set_theta_offset_when_free_spinning(float median_phi);
 
 
 

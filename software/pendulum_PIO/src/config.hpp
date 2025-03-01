@@ -27,7 +27,7 @@
  * so it is a function of time delta between sensor readings */
 #define MOTOR__VELOCITY_LPF_TF 0.01f
 
-#define MOTOR__Q_CURR_MEAS_FILT_TF  0.002f     // old is 0.004f
+#define MOTOR__Q_CURR_MEAS_FILT_TF  0.004f     // old is 0.004f
 #define MOTOR__Q_CURR_PID_P_GAIN    12.0f      // old is 70
 #define MOTOR__Q_CURR_PID_I_GAIN    3.0f       // old is 30
 #define MOTOR__Q_CURR_PID_D_GAIN    0.0f

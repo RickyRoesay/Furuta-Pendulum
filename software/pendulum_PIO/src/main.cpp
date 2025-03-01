@@ -69,18 +69,14 @@ void on_motor(char* cmd){ command.motor(&motor, cmd); }
 
 /************* SETPOINT: BIQUAD: FILTER: *************/
 
-#if 1 // proven, fast and loud
-Biquad iq_sp_biquad = Biquad(0.20657128726265578, 
+#if 0 // proven, fast and loud
+Biquad pdm_torque_setpoint_biquad_c = Biquad(0.20657128726265578, 
                              0.41314257452531156,
                              0.20657128726265578,
                             -0.36952595241514796,
                              0.19581110146577102);
 #else // NEW:  THIS CAUSES OVER CURRENT FAULTS AND FALSE SETPOINTS!!!! FPU seems to over/underflow?
-Biquad iq_sp_biquad = Biquad(0.136890606806f, 
-                             0.273781213612f,
-                             0.136890606806f,
-                            -0.780780215219f,
-                             0.328342642443f);
+
 #endif 
 
 
@@ -101,114 +97,17 @@ void Update_IT_callback(void)
 {
   digitalWrite(GPIO2, HIGH); 
   
-  mag_sense.update();
-  /** update theta and phi values. */
-  pdm.pdm_theta = pdm.offset.theta_offset - mag_sense.getMechanicalAngle();
-  if(pdm.pdm_theta < 0.0f) pdm.pdm_theta+=_2PI;
-  pdm.pdm_phi = pdm.pdm_theta;
-  if(pdm.pdm_phi > _PI)
-  pdm.pdm_phi -= _2PI; 
+  pdm_run_control_loop();
   
-  pdm.pdm_theta_dot_filt = (mag_sense.getVelocity() * pdm.exp_alpha_val) \
-  + ((1.0-pdm.exp_alpha_val) * pdm.pdm_theta_dot_filt);
-  
-  if(pdm.offset.min_phi_in_revolution > pdm.pdm_phi)
-  pdm.offset.min_phi_in_revolution = pdm.pdm_phi;
-  
-  if(pdm.offset.max_phi_in_revolution < pdm.pdm_phi)
-  pdm.offset.max_phi_in_revolution = pdm.pdm_phi;
-  
-  float tmp_q_curr_req;
-  
-  switch(pdm.control.state)
-  {
-    case PDM_STATE_INIT:
-    case PDM_STATE_RESET:
-      tmp_q_curr_req = get_upright_setpoint();
-      if(pdm.pdm_theta < 2.14 || pdm.pdm_theta > 4.14)
-      {
-        if(pdm.control.state == PDM_STATE_RESET)
-          motor.enable();
-
-        pdm.control.state = PDM_STATE_SWING_UP;
-        pdm.S = 2.0f; // use higher cutoff freq biquad once initialized
-      }
-
-      /** If the offset is good, the pendulum will swing up by itself due to the 
-       * innaccuracies of the position sensor + being right on top of the "kick"
-       * area of the swing up controller.  This recalibrates the offset if
-       * the pendulum doesn't kick itself up after 2 seconds.  
-       * 
-       * It has been noticed that after the motor calibrates, even if the end position 
-       * of the pendulum is equally pointed down as when the mcu powers on, the offset
-       * is no longer valid.  This may be due to the fact that the mag sensor has automatic
-       * gain calibration, and it may change gain after the motor turns on due to the 
-       * H-fields.  this has not been confirmed. */
-      pdm.offset.offset_reset_cntr++;
-      if(pdm.offset.offset_reset_cntr > 2000)
-      {
-        set_theta_offset_when_pointed_down();
-        pdm.offset.offset_reset_cntr = 0;
-      }
-    break;
-    
-    default:
-    case PDM_STATE_SWING_UP:
-    case PDM_STATE_UPRIGHT:
-      if(pdm.pdm_theta < pdm.control.PH || pdm.pdm_theta > (_2PI - pdm.control.PH))
-      {
-        tmp_q_curr_req = get_upright_setpoint();
-        pdm.control.PH = pdm.control.P;
-
-        /** don't wait for the q current setpoint to ramp up with the filter */
-        if(pdm.control.state != PDM_STATE_UPRIGHT)
-          iq_sp_biquad.set_steady_state_val(tmp_q_curr_req);
-
-        pdm.control.state = PDM_STATE_UPRIGHT;
-        pdm.K = pdm.J;
-      }
-      else 
-      {
-        tmp_q_curr_req = get_swing_up_setpoint();
-        pdm.control.PH = pdm.control.H;
-
-        /** don't wait for the q current setpoint to ramp up with the filter */
-        if(pdm.control.state != PDM_STATE_SWING_UP)
-        {
-          pdm.control.state = PDM_STATE_RESET;
-          motor.disable();
-        }
-      }
-    break;
-  }
-
-  #if 0
-  if(pdm.S == 2.0f)
-    tmp_q_curr_req = (tmp_q_curr_req * pdm.tau_iir_alpha) + (pdm.tau_prev * (1.0 - pdm.tau_iir_alpha));
-  #else
-  if(pdm.S == 2.0f)
-    tmp_q_curr_req = iq_sp_biquad.update_and_return_filt_value(tmp_q_curr_req);
-  #endif 
-  else if(pdm.S == 1.0f)
-    tmp_q_curr_req = _constrain(tmp_q_curr_req, pdm.tau_prev - pdm.tau_ramp_rate_limit, pdm.tau_prev + pdm.tau_ramp_rate_limit);
-
-  pdm.tau_prev = tmp_q_curr_req;
-    
   /** pack and send CAN msg */
-  if(0)
-  {
-    send_can_Debug1_message(motor.current_sp,
-                            motor.current.q,
-                            pdm.pdm_theta_dot_filt,
-                            motor.shaft_velocity,
-                            pdm.pdm_phi,
-                            encoder.getMechanicalAngle(),
-                            0);
-  }
-
-  motor.move(tmp_q_curr_req);
-  motor.loopFOC();
-
+  send_can_Debug1_message(motor.current_sp,
+                          motor.current.q,
+                          pdm.pdm_theta_dot_filt,
+                          motor.shaft_velocity,
+                          pdm.pdm_phi,
+                          encoder.getMechanicalAngle(),
+                          0);
+  
   digitalWrite(GPIO2, LOW); 
 }
 
@@ -299,7 +198,7 @@ void setup()
   }
   
   mag_sense.update();
-  set_theta_offset_when_pointed_down();
+  pdm_set_theta_offset_when_pointed_down();
   
   
   if(drv_ic.init(DRV8301_GAIN_SETTING, &SPI_2) != true)
@@ -314,10 +213,10 @@ void setup()
 
   gimbal_init(hw_serial);
 
-  iq_sp_biquad.set_steady_state_val(0.0f);
+  pdm_torque_setpoint_biquad_c.set_steady_state_val(0.0f);
 
   command.add('M', on_motor,"my motor motion");
-  command.add('C', on_constants,"Control Constants");
+  command.add('C', pdm_on_constants,"Control Constants");
   
   my_hadc.Instance = (ADC_TypeDef *)pinmap_peripheral(analogInputToPinName(SO1), PinMap_ADC);
 
@@ -366,7 +265,7 @@ void loop()
     hw_serial.print(test);
     hw_serial.print("    ");
     test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_3);
-    hw_serial.print(test);
+    hw_serial.println(test);
     #if 0
     hw_serial.print("    ");
     test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_2);
@@ -389,7 +288,7 @@ void loop()
       {
         pdm.offset.median_phi_in_revolution = phi_delta / 2.0f;
         pdm.offset.median_phi_in_revolution += pdm.offset.min_phi_in_revolution;
-        set_theta_offset_when_free_spinning(pdm.offset.median_phi_in_revolution);
+        pdm_set_theta_offset_when_free_spinning(pdm.offset.median_phi_in_revolution);
       }
       else
       {
