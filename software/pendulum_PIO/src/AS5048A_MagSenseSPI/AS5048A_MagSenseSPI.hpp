@@ -28,11 +28,6 @@ public:
     /** get current angle (rad) */
     float getSensorAngle() override;
 
-    /** Returns the filtered velocity.  This will apply a filter to the 
-     * most recently calculated velocity and return the value as a unit
-     * of rad/s */
-    float getFiltVelocity();
-
   
 
 

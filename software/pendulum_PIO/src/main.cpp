@@ -49,7 +49,8 @@ HardwareTimer *ctrl_loop_5kHz_timer;
  * 
  * after the drv_ic's init function is called only the "sw_bldc_driver" class
  * has control of the EN_GATE pin. */
-Drv8301 drv_ic = Drv8301(SPI_nCS_DRV, EN_GATE, nFAULT);
+drv8301 drv_ic = drv8301(SPI_nCS_DRV, EN_GATE, nFAULT);
+void on_nFAULT() { drv_ic.fault_pin_asserted_isr_callback(); }
 
 
 /************* MAG: SENSE: *************/
@@ -91,7 +92,7 @@ Biquad pdm_torque_setpoint_biquad_c = Biquad(0.20657128726265578,
 
 
 
-////////////////////////////////// PDM: FUNCTION: DEFINITIONS: /////////////////////////////////
+////////////////////////////////// 5kHz: CONTROL: LOOP: ISR: /////////////////////////////////
 
 void Update_IT_callback(void)
 {
@@ -110,27 +111,6 @@ void Update_IT_callback(void)
   
   digitalWrite(GPIO2, LOW); 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -161,20 +141,6 @@ void setup()
   ctrl_loop_5kHz_timer->setOverflow(200UL, MICROSEC_FORMAT);
   ctrl_loop_5kHz_timer->attachInterrupt(Update_IT_callback);
 
-  pinMode(SPI_nCS_DRV, OUTPUT);
-  digitalWrite(SPI_nCS_DRV, HIGH);
-
-  pinMode(SPI_nCS_IO6, OUTPUT);
-  digitalWrite(SPI_nCS_IO6, HIGH);
-
-  /** The Gate enable pin's pinmode will get overridden with the same 
-   * value when the "sw_bldc_driver" has it's init function
-   * called. */
-  pinMode(EN_GATE, OUTPUT);
-  digitalWrite(EN_GATE, LOW);
-
-  pinMode(nFAULT, INPUT);
-
   pinMode(AUX_H, OUTPUT); 
   pinMode(AUX_L, OUTPUT);
   digitalWrite(AUX_H, LOW);
@@ -198,10 +164,10 @@ void setup()
   }
   
   mag_sense.update();
+  
   pdm_set_theta_offset_when_pointed_down();
   
-  
-  if(drv_ic.init(DRV8301_GAIN_SETTING, &SPI_2) != true)
+  if(drv_ic.init(DRV8301_GAIN_SETTING, &SPI_2, on_nFAULT) != true)
   {
     hw_serial.println("Failed to set gain settings for DRV8301!");
 
@@ -266,47 +232,9 @@ void loop()
     hw_serial.print("    ");
     test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_3);
     hw_serial.println(test);
-    #if 0
-    hw_serial.print("    ");
-    test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_2);
-    hw_serial.println(test);
-    #endif 
   }
 
-  
-  int32_t num_of_full_rotations = encoder.getFullRotations();
-  int32_t full_rotation_delta = num_of_full_rotations - pdm.offset.last_rotation_num_at_offset_check;
-  
-  if(full_rotation_delta == 2 || full_rotation_delta == -2)
-  {
-    pdm.offset.last_rotation_num_at_offset_check = num_of_full_rotations;
-    // if phi min - phi max > threshold, reset value
-    float phi_delta = pdm.offset.max_phi_in_revolution - pdm.offset.min_phi_in_revolution;
-    if(phi_delta <= pdm.offset.phi_delta_thld_for_offset_restart)
-    {
-      if(pdm.control.state == PDM_STATE_UPRIGHT)
-      {
-        pdm.offset.median_phi_in_revolution = phi_delta / 2.0f;
-        pdm.offset.median_phi_in_revolution += pdm.offset.min_phi_in_revolution;
-        pdm_set_theta_offset_when_free_spinning(pdm.offset.median_phi_in_revolution);
-      }
-      else
-      {
-        pdm.control.state = PDM_STATE_RESET;
-        motor.disable();
-      }
-    }
-    // regardless, clear phi min and max
-    pdm.offset.min_phi_in_revolution = _2PI;
-    pdm.offset.max_phi_in_revolution = -_2PI;
-  }
-  else if(full_rotation_delta > 2 || full_rotation_delta < -2)
-  {
-    pdm.offset.last_rotation_num_at_offset_check = num_of_full_rotations;
-    pdm.offset.min_phi_in_revolution = _2PI;
-    pdm.offset.max_phi_in_revolution = -_2PI;
-  }
-
+  pdm_run_phi_offset_correction_checks();
   
   //digitalWrite(GPIO2, LOW);
 }

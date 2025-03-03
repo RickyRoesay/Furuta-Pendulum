@@ -1,10 +1,10 @@
 #ifndef __GPIO_H
 #define __GPIO_H
 
-#define	GPIO1	        PA0 // use this as uart4 tx
-#define	GPIO2	        PA1 // use this as uart4 rx
-#define	GPIO3_UART_TX	PA2
-#define	GPIO4_UART_RX	PA3
+#define	GPIO1	        PA0 
+#define	GPIO2	        PA1
+#define	GPIO3_UART_TX	PA2 // use this as uart4 tx
+#define	GPIO4_UART_RX	PA3 // use this as uart4 rx
 
 #define	SPI_MOSI      PC12
 #define	SPI_MISO	    PC11
@@ -17,11 +17,7 @@
 
 #define	ENC_A	        PB4
 #define	ENC_B	        PB5
-
-/** this won't be used as ENC_Z, but on the board's silkscreen it's labeled 
- * as "Z" on the encoder connector.  The name of this macro will 
- * reflect the board's label as well as it's indended use. */
-#define	ENC_Z__GPIO5	PC9  
+#define	ENC_Z	        PC9  
 
 #define	USB_DM	      PA11  // not confirmed
 #define	USB_DP	      PA12  // not confirmed

@@ -71,7 +71,7 @@ typedef struct
 extern pdm_info_s pdm;
 
 
-extern Drv8301 drv_ic;
+extern drv8301 drv_ic;
 extern AS5048A_MagSenseSPI mag_sense;
 extern HardwareSerial hw_serial;
 extern Commander command;
@@ -82,6 +82,7 @@ extern Biquad pdm_torque_setpoint_biquad_c;
 /////////////////////////////////// CONTROL: FUNCTIONS: ///////////////////////////////////
 int pdm_run_control_loop(void);
 
+void pdm_run_phi_offset_correction_checks(void);
 
 float pdm_get_upright_setpoint(void);
 

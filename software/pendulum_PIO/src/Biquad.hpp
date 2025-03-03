@@ -1,6 +1,8 @@
 #ifndef __BIQUAD_HPP
 #define __BIQUAD_HPP
 
+#include "config.hpp"
+
 class Biquad {
 public:
     Biquad(float a0_coeff, 
@@ -11,8 +13,13 @@ public:
         : a0_coeff_(a0_coeff), 
           a1_coeff_(a1_coeff), 
           a2_coeff_(a2_coeff), 
+          #ifndef CRASH_FPU_USING_WRONG_BIQUAD_GAIN_POLARITIES // see macro definition for info
           b1_coeff_(-b1_coeff), 
           b2_coeff_(-b2_coeff) {}
+          #else
+          b1_coeff_(b1_coeff), 
+          b2_coeff_(b2_coeff) {}
+          #endif
 
     float a0_coeff_;
     float a1_coeff_;

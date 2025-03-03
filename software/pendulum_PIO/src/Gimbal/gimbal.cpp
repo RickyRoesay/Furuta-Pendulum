@@ -39,6 +39,9 @@ void gimbal_init(Print &print)
 {
     motor.controller = MotionControlType::torque;
     motor.torque_controller = TorqueControlType::foc_current;
+
+    /** See macro definition for more info: */
+    sw_bldc_driver.dead_zone = SW_BLDC_DRV__DEAD_ZONE__AS_FACTOR_OF_SW_PRD;
   
     /** set limits to a low value in case there are issues with FOC init */
     sw_bldc_driver.voltage_power_supply = SW_BLDC_DRV__V_PSU;

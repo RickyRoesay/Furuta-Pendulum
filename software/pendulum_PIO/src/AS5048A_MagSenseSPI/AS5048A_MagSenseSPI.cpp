@@ -7,6 +7,8 @@
 #include "AS5048A_MagSenseSPI.hpp"
 #include "AS5048A_Registers.hpp"
 
+/** NOTE: This clock frequency only works when a 120pF capacitor is placed
+ * between SCLK and GND.  The reason for this has not been root caused. */
 #define SPI_CLOCK_SPEED_HZ_MAG 8000000
 #define SPI_MODE__CPOL_0__CPHA_1  SPI_MODE1
 
