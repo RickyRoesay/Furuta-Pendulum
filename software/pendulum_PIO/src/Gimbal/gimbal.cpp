@@ -18,7 +18,7 @@ Encoder encoder = Encoder(ENC_A, ENC_B, ENCODER_PPR);
 
 BLDCMotor motor = BLDCMotor( NUM_OF_POLE_PAIRS );
 
-BLDCDriver6PWM sw_bldc_driver = BLDCDriver6PWM(AH, AL, BH, BL, CH, CL, EN_GATE);
+BLDCDriver6PWM sw_bldc_driver = BLDCDriver6PWM(AH, AL, BH, BL, CH, CL/** , EN_GATE*/);
 
 /** Note: SO1 is referenced to Phase B in HW, but in SW its references as Phase A.
  * Similary, SO2 is referenced as Phase C, but in software its reported as Phase B */

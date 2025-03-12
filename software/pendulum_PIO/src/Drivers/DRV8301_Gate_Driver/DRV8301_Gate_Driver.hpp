@@ -36,22 +36,14 @@ typedef enum : uint32_t {
     DRV8301_FaultType_GVDD_OV  = (1 << 23)  //!< DRV8301 Vdd Over Voltage fault
 } DRV8301_FaultType_e;
 
-#if 0
-typedef enum : uint32_t {
-    kRegAddrStatus1  = 0 << 11,  //!< Status Register 1
-    kRegAddrStatus2  = 1 << 11,  //!< Status Register 2
-    kRegAddrControl1 = 2 << 11,  //!< Control Register 1
-    kRegAddrControl2 = 3 << 11   //!< Control Register 2
-} drv_status;
-#endif 
 
 
-class drv8301 
+class DRV8301_Gate_Driver 
 {
     public:
         /** The DC_CAL and OCTW pins are not connected to the MCU on the Odrive 3.5. 
          * I'm assuming they are also not connected on the ODESC4.2 but haven't confirmed this. */
-        drv8301(int nCS_gpio, int EN_gpio, int nFAULT_gpio) : nCS_gpio_(nCS_gpio), EN_gpio_(EN_gpio), nFAULT_gpio_(nFAULT_gpio) {}
+        DRV8301_Gate_Driver(int nCS_gpio, int EN_gpio, int nFAULT_gpio) : nCS_gpio_(nCS_gpio), EN_gpio_(EN_gpio), nFAULT_gpio_(nFAULT_gpio) {}
         
         /** Once the class is declared, only then can we link a new function
          * that calls "declared_drv_class.fault_pin_asserted_isr_callback"
@@ -59,13 +51,20 @@ class drv8301
          * this externally declared/defined function that calls "fault_pin_asserted_isr_callback" */
         bool init(DRV8301_GainSetting_e requested_gain,  SPIClass* spi,  void (*handle_nFAULT)() = nullptr);
 
+        void enable(void);
+        void disable(void);
+
         DRV8301_FaultType_e get_error();
         
         /** The function pointer that is passed as
-         * parameter "handle_nFAULT" into the drv8301 init function
+         * parameter "handle_nFAULT" into the DRV8301_Gate_Driver init function
          * should call "fault_pin_asserted_isr_callback." */
         void fault_pin_asserted_isr_callback(void);
 
+        /** "EN_pin_controlled_level" is only what we set the value to,
+         * if the enable pin is shorted high or low and is overpowering 
+         * the MCU's output drive strength, we do not capture that information. */
+        bool EN_pin_controlled_level; 
         bool nFAULT_pin_level;
         bool has_nFAULT_tripped = false;
         uint32_t error_code_when_nFAULT_tripped = DRV8301_FaultType_NoFault;
@@ -104,7 +103,7 @@ class drv8301
         int EN_gpio_;
         int nFAULT_gpio_;
 
-        const int SPI_CLOCK_SPEED_HZ_DRV = 500000UL;
+        const int SPI_CLOCK_SPEED_HZ_DRV = 8000000UL;
 
         SPIClass* spi_class_ptr;
 

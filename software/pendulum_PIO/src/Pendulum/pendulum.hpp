@@ -2,8 +2,8 @@
 #define __PENDULUM_HPP
 
 #include "stdint.h"
-#include "DRV8301/drv8301.hpp" 
-#include "AS5048A_MagSenseSPI/AS5048A_MagSenseSPI.hpp" // mag sensor
+#include "Drivers/DRV8301_Gate_Driver/DRV8301_Gate_Driver.hpp" 
+#include "Drivers/AS5048A_MagSenseSPI/AS5048A_MagSenseSPI.hpp" // mag sensor
 #include "CAN_TP/can_tp.hpp"
 #include "Biquad.hpp"
 #include "Gimbal/gimbal.hpp"
@@ -71,7 +71,7 @@ typedef struct
 extern pdm_info_s pdm;
 
 
-extern drv8301 drv_ic;
+extern DRV8301_Gate_Driver hw_bldc_driver;
 extern AS5048A_MagSenseSPI mag_sense;
 extern HardwareSerial hw_serial;
 extern Commander command;

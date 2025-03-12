@@ -10,19 +10,19 @@
 #define	SPI_MISO	    PC11
 #define	SPI_SCK	      PC10
 #define	SPI_nCS_IO6	  PB2
-#define	SPI_nCS_DRV	  PC13  // not confirmed
+#define	SPI_nCS_DRV	  PC13 
 
-#define	CAN_TX	      PB9   // not confirmed
-#define	CAN_RX	      PB8   // not confirmed
+#define	CAN_TX	      PB9 
+#define	CAN_RX	      PB8 
 
 #define	ENC_A	        PB4
 #define	ENC_B	        PB5
 #define	ENC_Z	        PC9  
 
-#define	USB_DM	      PA11  // not confirmed
-#define	USB_DP	      PA12  // not confirmed
+#define	USB_DM	      PA11  // yellow wire
+#define	USB_DP	      PA12  // green wire
 
-#define	nFAULT	      PD2   // not confirmed
+#define	nFAULT	      PD2   
 #define	EN_GATE	      PB12
 #define	AH	          PA8
 #define	AL	          PB13
@@ -34,7 +34,7 @@
 #define	AUX_H	        PB11
 #define	AUX_L	        PB10
 
-/** Analog Inputs, not confirmed: */
+/** Analog Inputs: */
 #define	SO1	          PC0
 #define	SO2	          PC1
 

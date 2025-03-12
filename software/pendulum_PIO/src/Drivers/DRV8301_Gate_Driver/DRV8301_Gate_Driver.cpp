@@ -1,5 +1,5 @@
 
-#include "drv8301.hpp"
+#include "DRV8301_Gate_Driver.hpp"
 #include "Arduino.h"
 
 
@@ -23,21 +23,27 @@
 #define nFAULT_PIN_FAULTED      0
 #define nFAULT_PIN_UNFAULTED    1
 
-void drv8301::fault_pin_asserted_isr_callback(void)
+void DRV8301_Gate_Driver::fault_pin_asserted_isr_callback(void)
 {
     nFAULT_pin_level = digitalRead(nFAULT_gpio_);
-    has_nFAULT_tripped = true;
 
-    
-    #if 0
-    error_code_when_nFAULT_tripped = get_error();
-    
-    /** Set the enable pin gpio as an input so 
-     * writes to the EN pin by the sw bldc driver 
-     * class have no effect, and the pulldown 
-     * resistor keeps the value LOW. */
-    pinMode(EN_gpio_, INPUT);
-    #endif 
+    /** only check for faults if the device is enabled, 
+     * otherwise the errors will all be falsely active
+     * simply because the gate driver is off. */
+    if(EN_pin_controlled_level == HIGH)
+    {
+        has_nFAULT_tripped = true;
+        error_code_when_nFAULT_tripped = get_error();
+
+        /** Set the enable pin LOW since we faulted  */
+        digitalWrite(EN_gpio_, LOW);
+        EN_pin_controlled_level = LOW;
+    }
+    else
+    {
+        /** do nothing, somewhere else in the code we disabled
+         * the gate driver causing the nFAULT pin to go LOW/asserted. */
+    }
 }
 
 
@@ -45,7 +51,7 @@ void drv8301::fault_pin_asserted_isr_callback(void)
 
 
 
-bool drv8301::init(DRV8301_GainSetting_e requested_gain, SPIClass* spi, void (*handle_nFAULT)()) 
+bool DRV8301_Gate_Driver::init(DRV8301_GainSetting_e requested_gain, SPIClass* spi, void (*handle_nFAULT)()) 
 {
     uint16_t val;
 
@@ -93,7 +99,8 @@ bool drv8301::init(DRV8301_GainSetting_e requested_gain, SPIClass* spi, void (*h
     /** Mimumum pull-down time for full reset: 20us (Datasheet Section 7.4.1)
      * Double that for a reasonable amount of margin.  */
     delayMicroseconds(40); 
-    digitalWrite(EN_gpio_, HIGH);
+    
+    enable(); // enable the gate driver.
 
     /** As per datasheet section 6.8, the time it takes for SPI to be ready after EN_GATE
      * transitions to HIGH is 5-10ms.  When reading SPI too soon after EN_GATE is driven high,
@@ -123,8 +130,12 @@ bool drv8301::init(DRV8301_GainSetting_e requested_gain, SPIClass* spi, void (*h
     {
         if(nFAULT_pin_level != nFAULT_PIN_UNFAULTED)
             has_nFAULT_tripped = true;
+
+        EN_pin_controlled_level = LOW;
+
         /** Disable the device and return 0 */    
         digitalWrite(EN_gpio_, LOW);
+
         return false;
     }
     else
@@ -137,7 +148,42 @@ bool drv8301::init(DRV8301_GainSetting_e requested_gain, SPIClass* spi, void (*h
 }
 
 
-DRV8301_FaultType_e drv8301::get_error() 
+
+void DRV8301_Gate_Driver::enable() 
+{
+    if(has_nFAULT_tripped == false)
+    {
+
+        EN_pin_controlled_level = HIGH;
+        digitalWrite(EN_gpio_, HIGH);
+        nFAULT_pin_level = digitalRead(nFAULT_gpio_);
+    }
+    else
+    {
+        /** Do nothing, don't enable the gate driver 
+         * if we have previously faulted.
+         */
+    }
+}
+
+
+
+void DRV8301_Gate_Driver::disable() 
+{
+    /** Set the "EN_pin_controlled_level" variable
+     * before controlling the pin in case the external interrupt
+     * configured to trip on nFAULT sets immediately after disabling the
+     * device.  This way, if that happens, the EN_pin_controlled_level
+     * will already be set and we'll know if nFAULT is only asserted active
+     * since the device is disabled. */
+    EN_pin_controlled_level = LOW;
+    digitalWrite(EN_gpio_, LOW);
+    nFAULT_pin_level = digitalRead(nFAULT_gpio_);
+}
+
+
+
+DRV8301_FaultType_e DRV8301_Gate_Driver::get_error() 
 {
     uint16_t fault1, fault2;
 
@@ -149,7 +195,9 @@ DRV8301_FaultType_e drv8301::get_error()
     return (DRV8301_FaultType_e)((uint32_t)fault1 | ((uint32_t)(fault2 & 0x0080) << 16));
 }
 
-bool drv8301::read_reg(const RegAddr_e regName, uint16_t* data) 
+
+
+bool DRV8301_Gate_Driver::read_reg(const RegAddr_e regName, uint16_t* data) 
 {
     tx_buf_ = build_ctrl_word(DRV8301_CtrlMode_Read, regName, 0);
 
@@ -181,7 +229,10 @@ bool drv8301::read_reg(const RegAddr_e regName, uint16_t* data)
     return true;
 }
 
-bool drv8301::write_reg(const RegAddr_e regName, const uint16_t data) 
+
+
+
+bool DRV8301_Gate_Driver::write_reg(const RegAddr_e regName, const uint16_t data) 
 {
     tx_buf_ = build_ctrl_word(DRV8301_CtrlMode_Write, regName, data);
 

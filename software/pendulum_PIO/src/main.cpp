@@ -3,9 +3,8 @@
 #include "../lib/Arduino-FOC/src/SimpleFOC.h"
 
 
-#include "DRV8301/drv8301.hpp" 
-
-#include "AS5048A_MagSenseSPI/AS5048A_MagSenseSPI.hpp" // mag sensor
+#include "Drivers/DRV8301_Gate_Driver/DRV8301_Gate_Driver.hpp" 
+#include "Drivers/AS5048A_MagSenseSPI/AS5048A_MagSenseSPI.hpp" // mag sensor
 
 #include "../lib/Arduino-FOC/src/common/foc_utils.h" // sin, cosine, pi, 2pi, etc
 
@@ -44,13 +43,13 @@ ADC_HandleTypeDef my_hadc;
 HardwareTimer *ctrl_loop_5kHz_timer;
 
 /************* DRV8301: DRIVER: *************/
-/** NOTE: both sw_bldc_driver and drv_ic classes have control over 
- * the EN_GATE, but the only time drv_ic uses it is on initialization. 
+/** NOTE: both sw_bldc_driver and hw_bldc_driver classes have control over 
+ * the EN_GATE, but the only time hw_bldc_driver uses it is on initialization. 
  * 
- * after the drv_ic's init function is called only the "sw_bldc_driver" class
+ * after the hw_bldc_driver's init function is called only the "sw_bldc_driver" class
  * has control of the EN_GATE pin. */
-drv8301 drv_ic = drv8301(SPI_nCS_DRV, EN_GATE, nFAULT);
-void on_nFAULT() { drv_ic.fault_pin_asserted_isr_callback(); }
+DRV8301_Gate_Driver hw_bldc_driver = DRV8301_Gate_Driver(SPI_nCS_DRV, EN_GATE, nFAULT);
+void on_nFAULT() { hw_bldc_driver.fault_pin_asserted_isr_callback(); }
 
 
 /************* MAG: SENSE: *************/
@@ -67,18 +66,6 @@ HardwareSerial hw_serial(GPIO4_UART_RX, GPIO3_UART_TX);
 Commander command = Commander(hw_serial);// commander interface
 void on_motor(char* cmd){ command.motor(&motor, cmd); }
 
-
-/************* SETPOINT: BIQUAD: FILTER: *************/
-
-#if 0 // proven, fast and loud
-Biquad pdm_torque_setpoint_biquad_c = Biquad(0.20657128726265578, 
-                             0.41314257452531156,
-                             0.20657128726265578,
-                            -0.36952595241514796,
-                             0.19581110146577102);
-#else // NEW:  THIS CAUSES OVER CURRENT FAULTS AND FALSE SETPOINTS!!!! FPU seems to over/underflow?
-
-#endif 
 
 
 
@@ -122,17 +109,22 @@ void Update_IT_callback(void)
 
 void setup() 
 {
-  hw_serial.begin(250000); //115200
-
-  #if 0 /** this is set up and used by the hw_serial class (uart/serial) */
-  pinMode(GPIO3_UART_TX, INPUT);
-  pinMode(GPIO4_UART_RX, INPUT);
-  #endif 
+  hw_serial.begin(250000); 
 
   /** only used for timing analysis for now */
   pinMode(GPIO1, OUTPUT);
   pinMode(GPIO2, OUTPUT);
-
+  digitalWrite(GPIO1, LOW);
+  digitalWrite(GPIO2, LOW);
+  
+  /** This is a test to verify which wire goes to what signal on the board. */
+  pinMode(USB_DM, OUTPUT);
+  pinMode(USB_DP, OUTPUT);
+  digitalWrite(USB_DM, HIGH);
+  digitalWrite(USB_DM, LOW);
+  digitalWrite(USB_DP, HIGH);
+  digitalWrite(USB_DP, LOW);
+  
   // Automatically retrieve TIM instance and channel associated to FLOATING_M1_CH_TIM3
   TIM_TypeDef *Instance = (TIM_TypeDef *)pinmap_peripheral(digitalPinToPinName(FLOATING_M1_CH_TIM3), PinMap_PWM);
   ctrl_loop_5kHz_timer = new HardwareTimer(Instance);
@@ -157,7 +149,7 @@ void setup()
   // init magnetic angle sensor
   if(mag_sense.init(&SPI_2) != true)
   {
-    hw_serial.println("Failed to initialized AS5048A Mag Sensor!");
+    hw_serial.println("Failed to initialize AS5048A Mag Sensor!");
 
     /** return early, do not control the motor! */
     return;
@@ -167,7 +159,7 @@ void setup()
   
   pdm_set_theta_offset_when_pointed_down();
   
-  if(drv_ic.init(DRV8301_GAIN_SETTING, &SPI_2, on_nFAULT) != true)
+  if(hw_bldc_driver.init(DRV8301_GAIN_SETTING, &SPI_2, on_nFAULT) != true)
   {
     hw_serial.println("Failed to set gain settings for DRV8301!");
 

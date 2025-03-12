@@ -5,6 +5,7 @@
 #include "Gimbal/gimbal.hpp"
 #include "Biquad.hpp"
 
+#define TURN_OFF_MOTOR_WHEN_SWITCHING_CONTROL_SCHEMES
 
 #if 0
 Biquad pdm_torque_setpoint_biquad_c = Biquad(0.06983610678422146f, 
@@ -30,7 +31,7 @@ pdm_info_s pdm =
   .pdm_theta_dot_filt = 0.0f, 
   .pdm_theta = 0.0f, 
   .pdm_phi = 0.0f,   
-  .exp_alpha_val = 0.25, // old value is 0.025
+  .exp_alpha_val = 0.25f, // old value is 0.025
 
   /** Swing-Up Controller: */
   .K = 0.0003f, //0.0015f   // initial value 
@@ -58,8 +59,8 @@ pdm_info_s pdm =
   .control = {
     .reset_loop_wait_cnt = 0,
     .P = 1.0f, // +/- 1 radian for phi as state machine 
-    .PH = 0.8f,
-    .H = 0.8f, // +/- 0.1 radian for phi as state machine 
+    .PH = 0.7f,
+    .H = 0.7f, // +/- 0.1 radian for phi as state machine 
     .state = PDM_STATE_INIT,
   }
 };
@@ -99,8 +100,13 @@ int pdm_run_control_loop(void)
       tmp_q_curr_req = pdm_get_swing_up_setpoint();
       if(pdm.pdm_theta < 2.14 || pdm.pdm_theta > 4.14)
       {
+        #ifdef TURN_OFF_MOTOR_WHEN_SWITCHING_CONTROL_SCHEMES
         if(pdm.control.state == PDM_STATE_RESET)
+        {
+          hw_bldc_driver.enable(); 
           motor.enable();
+        }
+        #endif 
 
         pdm.control.state = PDM_STATE_SWING_UP;
       }
@@ -129,7 +135,13 @@ int pdm_run_control_loop(void)
         if(pdm.control.state != PDM_STATE_SWING_UP)
         {
           pdm.control.state = PDM_STATE_RESET;
-          motor.disable();
+          tmp_q_curr_req = 0;
+          pdm_torque_setpoint_biquad_c.set_steady_state_val(0.0);
+
+          #ifdef TURN_OFF_MOTOR_WHEN_SWITCHING_CONTROL_SCHEMES
+            motor.disable();
+            hw_bldc_driver.disable(); 
+          #endif 
         }
       }
     break;
