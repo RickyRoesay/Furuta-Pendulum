@@ -5,6 +5,7 @@
 
 #include "Drivers/DRV8301_Gate_Driver/DRV8301_Gate_Driver.hpp" 
 #include "Drivers/AS5048A_MagSenseSPI/AS5048A_MagSenseSPI.hpp" // mag sensor
+#include "Drivers/WS2812B_RGB_LED_Strip/WS2812B_RGB_LED_Strip.hpp" // RGB LED's
 
 #include "../lib/Arduino-FOC/src/common/foc_utils.h" // sin, cosine, pi, 2pi, etc
 
@@ -40,7 +41,8 @@
 //////////////////////////// CLASS: DECLARATIONS: ////////////////////////////
 
 ADC_HandleTypeDef my_hadc;
-HardwareTimer *ctrl_loop_5kHz_timer;
+HardwareTimer ctrl_loop_5kHz_timer = HardwareTimer(TIM3);
+HardwareTimer test_tmr = HardwareTimer(TIM8);
 
 /************* DRV8301: DRIVER: *************/
 /** NOTE: both sw_bldc_driver and hw_bldc_driver classes have control over 
@@ -67,7 +69,7 @@ Commander command = Commander(hw_serial);// commander interface
 void on_motor(char* cmd){ command.motor(&motor, cmd); }
 
 
-
+WS2812B_RGB_LED_Strip led_strip = WS2812B_RGB_LED_Strip(USB_DP__LED_DO);
 
 
 
@@ -117,21 +119,36 @@ void setup()
   digitalWrite(GPIO1, LOW);
   digitalWrite(GPIO2, LOW);
   
-  /** This is a test to verify which wire goes to what signal on the board. */
-  pinMode(USB_DM, OUTPUT);
-  pinMode(USB_DP, OUTPUT);
-  digitalWrite(USB_DM, HIGH);
-  digitalWrite(USB_DM, LOW);
-  digitalWrite(USB_DP, HIGH);
-  digitalWrite(USB_DP, LOW);
+  test_tmr.setOverflow(50, TICK_FORMAT);
+  test_tmr.getHandle()->Instance->DIER = 1 << 8; // set UDE update DMA req enable bit HIGH
+  test_tmr.resume();
   
-  // Automatically retrieve TIM instance and channel associated to FLOATING_M1_CH_TIM3
-  TIM_TypeDef *Instance = (TIM_TypeDef *)pinmap_peripheral(digitalPinToPinName(FLOATING_M1_CH_TIM3), PinMap_PWM);
-  ctrl_loop_5kHz_timer = new HardwareTimer(Instance);
+
+  led_strip.init_dma_and_timer_peripherals(5);
+
+  /** datasheet is super amazing and gives 0 info, but through
+   * experimentation the first param ends up being green,
+   * second param is red, third is blue */
+  led_strip.modify_pixel_buffer_all_leds(0, 255, 255);
+
+  digitalWrite(GPIO2, HIGH);
+  led_strip.process_bitfield_array(1);
+  digitalWrite(GPIO2, LOW);
+
+  if(led_strip.process_bitfield_array(10) == WS2812B_READY_TO_UPLOAD_BITSTREAM)
+  {
+    (void)led_strip.write_bitfield_array_via_dma();
+  }
+  
+
+  
 
   /** Prescaler is automatically set when setting overflow with format != tick */
-  ctrl_loop_5kHz_timer->setOverflow(200UL, MICROSEC_FORMAT);
-  ctrl_loop_5kHz_timer->attachInterrupt(Update_IT_callback);
+  ctrl_loop_5kHz_timer.setOverflow(200UL, MICROSEC_FORMAT);
+  ctrl_loop_5kHz_timer.attachInterrupt(Update_IT_callback);
+
+
+
 
   pinMode(AUX_H, OUTPUT); 
   pinMode(AUX_L, OUTPUT);
@@ -181,7 +198,9 @@ void setup()
   command.run();
   motor.monitor();
   
-  ctrl_loop_5kHz_timer->resume();
+  ctrl_loop_5kHz_timer.resume();
+
+  
 
   motor.enable();
 }

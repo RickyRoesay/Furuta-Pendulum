@@ -20,7 +20,7 @@
 #define	ENC_Z	        PC9  
 
 #define	USB_DM	      PA11  // yellow wire
-#define	USB_DP	      PA12  // green wire
+#define	USB_DP__LED_DO	      PA12  // green wire
 
 #define	nFAULT	      PD2   
 #define	EN_GATE	      PB12
@@ -43,15 +43,6 @@
 #define	AUX_TEMP	    PA5_ALT1
 #define	VBUS_SNS	   PA6  // PA6_ALT1
 
-/** this is an unused pin that corresponds to TIM3 when used as a 
- * timer pin via the HardwareTimer class.  We only need this to 
- * act as an interrupt generation source so we chose a pin that
- * is not connected to anything on the ODESC4.2 
- * 
- * NOTE: It is assumed that all "Motor1" (second instance of motors)
- * in the odrive 3.5 schematic have pins that are not connected to anything
- * on the ODESC4.2 */
-#define FLOATING_M1_CH_TIM3  PC8
 
 
 #endif // __GPIO_H
