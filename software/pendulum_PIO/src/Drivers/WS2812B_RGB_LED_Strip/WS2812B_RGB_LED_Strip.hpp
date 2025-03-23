@@ -5,10 +5,26 @@
 #include <SPI.h>
 //#include "stm32f405xx.h"
 
+
+/** The order of operations for this asynchronous driver is as follows:
+ *      1). Write to pixel buffer, actually choosing what the next "frame" will be.
+ *      2). Process Bitfield array until status is "WS2812B_READY_TO_UPLOAD_BITSTREAM."
+ *      3). Trigger dma transfer using "write_bitfield_array_via_dma" function.
+ * 
+ * NOTE: This driver utilizes DMA2, Stream 1, Channel 7. This means we use
+ * TIM8 Update to trigger the dma bumps.
+ * 
+ * IMPORTANT: NOTE: DMA1 CAN NOT WRITE TO GPIO
+ * on the STM32F4!!!!  A helpful guide that goes into more detail can be found using 
+ * this link:  http://www.efton.sk/STM32/gotcha/g30.html
+ */
+
+
+
 /** Only up to 50 LED's are supported.  This number
  * was chosen arbitrarily as a static/compile time
  * limit to simplify implementation. */
-#define WS2812B_MAX_NUM_OF_LEDS 8
+#define WS2812B_MAX_NUM_OF_LEDS 50
 
 
 #define WS2812B_NUM_OF_BITS_PER_PIXEL  24
@@ -32,7 +48,6 @@
                                           + WS2812B_NUM_OF_BITS_PER_RESET)
 
 
-/** DMA1, Stream 6, Channel 6 */
  
 
 typedef enum : uint8_t {
@@ -44,7 +59,7 @@ typedef enum : uint8_t {
 typedef enum {
     WS2812B_INIT_PERIPHERALS, 
     WS2812B_INIT_FAIL, 
-    WS2812B_WAITING_FOR_PIXEL_DATA,  
+    WS2812B_WAITING_TO_PROCESS_PIXEL_DATA,  
     WS2812B_TRANSMITTING_DATA, 
     WS2812B_READY_TO_UPLOAD_BITSTREAM, 
 } WS2812B_Status_e;
@@ -75,8 +90,8 @@ class WS2812B_RGB_LED_Strip
 
         void modify_pixel_buffer_all_leds(uint8_t red, uint8_t green, uint8_t blue);
 
-        inline bool modify_pixel_buffer_single(uint8_t buffer_idx,
-                                                uint8_t red, uint8_t green, uint8_t blue);
+        bool modify_pixel_buffer_single(uint8_t buffer_idx,
+                                        uint8_t red, uint8_t green, uint8_t blue);
              
                                             
         /** returns the status of the driver.  This function
@@ -98,10 +113,11 @@ class WS2812B_RGB_LED_Strip
         /** Return false if the ulPin is not a valid digital pin on the MCU. */
         bool set_bit_masks_and_dma_dest_pointer_from_arduino_pin_macro(uint32_t ulPin);
         
-        void write_pixel_data_to_bitstream(uint32_t *ptr_to_bitstream, 
-        WS2812B_Led_Pixel_Info_s * ptr_to_pixel_info);
+        inline void write_pixel_data_to_bitstream(uint32_t *ptr_to_bitstream, 
+                                            WS2812B_Led_Pixel_Info_s * ptr_to_pixel_info);
         
         inline void write_bit_data_to_bitstream(uint32_t *ptr_to_bitstream, uint8_t bit_level);
+
         inline void write_reset_data_to_bitstream(WS2812B_Bitstream_Index_e bitstream_number);
             
         inline bool is_dma_transfer_in_progress(void);
@@ -117,19 +133,14 @@ class WS2812B_RGB_LED_Strip
 
         WS2812B_Status_e status = WS2812B_INIT_PERIPHERALS;
 
-        
         WS2812B_Led_Pixel_Info_s led_pixel_buf[WS2812B_MAX_NUM_OF_LEDS];
-
-        
-
-        /** There needs to be 2 different variables for active and requested 
-         * led num since we may be using active_led_num as an index limit
-         * when a new number of leds to be controlled is requested. */
-        uint8_t active_led_num;
-        uint8_t requested_led_num;
-
         uint8_t next_led_buf_idx_to_process;
-        
+
+        /** This is the number of LED's that we intend to write to 
+         * per update, and does not necessarily have to be 50.  It 
+         * can be any value between 1 and 50 inclusively. */
+        uint8_t active_led_num;
+
         uint8_t bitstream_idx_for_led_buf = WS2812B_BITSTREAM_1;
         uint8_t bitstream_idx_for_dma = WS2812B_BITSTREAM_0;
         

@@ -6,6 +6,7 @@
 #include "Drivers/DRV8301_Gate_Driver/DRV8301_Gate_Driver.hpp" 
 #include "Drivers/AS5048A_MagSenseSPI/AS5048A_MagSenseSPI.hpp" // mag sensor
 #include "Drivers/WS2812B_RGB_LED_Strip/WS2812B_RGB_LED_Strip.hpp" // RGB LED's
+#include "Drivers/ADC_Interface/ADC_Interface.hpp" 
 
 #include "../lib/Arduino-FOC/src/common/foc_utils.h" // sin, cosine, pi, 2pi, etc
 
@@ -40,9 +41,9 @@
 
 //////////////////////////// CLASS: DECLARATIONS: ////////////////////////////
 
-ADC_HandleTypeDef my_hadc;
+
 HardwareTimer ctrl_loop_5kHz_timer = HardwareTimer(TIM3);
-HardwareTimer test_tmr = HardwareTimer(TIM8);
+//HardwareTimer test_tmr = HardwareTimer(TIM8);
 
 /************* DRV8301: DRIVER: *************/
 /** NOTE: both sw_bldc_driver and hw_bldc_driver classes have control over 
@@ -119,36 +120,23 @@ void setup()
   digitalWrite(GPIO1, LOW);
   digitalWrite(GPIO2, LOW);
   
-  test_tmr.setOverflow(50, TICK_FORMAT);
-  test_tmr.getHandle()->Instance->DIER = 1 << 8; // set UDE update DMA req enable bit HIGH
-  test_tmr.resume();
-  
 
-  led_strip.init_dma_and_timer_peripherals(5);
 
-  /** datasheet is super amazing and gives 0 info, but through
-   * experimentation the first param ends up being green,
-   * second param is red, third is blue */
-  led_strip.modify_pixel_buffer_all_leds(0, 255, 255);
 
-  digitalWrite(GPIO2, HIGH);
-  led_strip.process_bitfield_array(1);
-  digitalWrite(GPIO2, LOW);
+  led_strip.init_dma_and_timer_peripherals(9);
 
-  if(led_strip.process_bitfield_array(10) == WS2812B_READY_TO_UPLOAD_BITSTREAM)
+  led_strip.modify_pixel_buffer_all_leds(5, 5, 5);
+
+  if(led_strip.process_bitfield_array(9) == WS2812B_READY_TO_UPLOAD_BITSTREAM)
   {
     (void)led_strip.write_bitfield_array_via_dma();
   }
   
 
-  
 
   /** Prescaler is automatically set when setting overflow with format != tick */
   ctrl_loop_5kHz_timer.setOverflow(200UL, MICROSEC_FORMAT);
   ctrl_loop_5kHz_timer.attachInterrupt(Update_IT_callback);
-
-
-
 
   pinMode(AUX_H, OUTPUT); 
   pinMode(AUX_L, OUTPUT);
@@ -193,7 +181,6 @@ void setup()
   command.add('M', on_motor,"my motor motion");
   command.add('C', pdm_on_constants,"Control Constants");
   
-  my_hadc.Instance = (ADC_TypeDef *)pinmap_peripheral(analogInputToPinName(SO1), PinMap_ADC);
 
   command.run();
   motor.monitor();
@@ -235,13 +222,13 @@ void loop()
   }
   else if(pdm.D == 2.0f)
   {
-    uint32_t test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_1);
+    uint32_t test = HAL_ADCEx_InjectedGetValue(&adc1_handle__SOx__Vbus, ADC_INJECTED_RANK_1);
     hw_serial.print(test); //
     hw_serial.print("    ");
-    test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_2);
+    test = HAL_ADCEx_InjectedGetValue(&adc1_handle__SOx__Vbus, ADC_INJECTED_RANK_2);
     hw_serial.print(test);
     hw_serial.print("    ");
-    test = HAL_ADCEx_InjectedGetValue(&my_hadc, ADC_INJECTED_RANK_3);
+    test = HAL_ADCEx_InjectedGetValue(&adc1_handle__SOx__Vbus, ADC_INJECTED_RANK_3);
     hw_serial.println(test);
   }
 

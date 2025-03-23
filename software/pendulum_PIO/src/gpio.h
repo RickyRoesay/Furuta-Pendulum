@@ -35,13 +35,15 @@
 #define	AUX_L	        PB10
 
 /** Analog Inputs: */
+
+/** ADC 1: */
 #define	SO1	          PC0
 #define	SO2	          PC1
+#define	VBUS_SNS	  PA6  // PA6_ALT1
 
-/** the "_ALT1" is for ADC2, and additionally "_ALT2" is for ADC3 */
+/** ADC 2: */
 #define	M_TEMP	      PC5_ALT1
-#define	AUX_TEMP	    PA5_ALT1
-#define	VBUS_SNS	   PA6  // PA6_ALT1
+#define	AUX_TEMP	  PA5_ALT1
 
 
 
