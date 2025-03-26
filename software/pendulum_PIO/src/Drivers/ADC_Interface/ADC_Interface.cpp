@@ -6,8 +6,9 @@
 #include "stm32f405xx.h"
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_hal_rcc.h"
-#include "stm32f4xx_hal_dma.h"
-
+#include "stm32f4xx_hal_adc_ex.h"
+#include "../lib/arduino-foc/src/current_sense/hardware_specific/stm32/stm32f4/stm32f4_utils.h"
+#include "../lib/arduino-foc/src/current_sense/hardware_specific/stm32/stm32f4/stm32f4_hal.h"
 
 
 /** this is a redundant class that has the same peripheral instance as the
@@ -21,9 +22,92 @@ ADC_HandleTypeDef adc1_handle__SOx__Vbus;
 ADC_HandleTypeDef adc2_handle__M_AUX_temps;
 
 
-void adc_if_init(void)
+static int adc_if_adc2_init(HardwareTimer* timer);
+
+
+
+
+void adc_if_init(HardwareTimer* inj_ch_trig_timer)
 {
     adc1_handle__SOx__Vbus.Instance = (ADC_TypeDef *)pinmap_peripheral(analogInputToPinName(SO1), PinMap_ADC);
-    adc2_handle__M_AUX_temps.Instance = (ADC_TypeDef *)ADC2_BASE;
+    //adc2_handle__M_AUX_temps.Instance = (ADC_TypeDef *)ADC2_BASE;
+    (void)adc_if_adc2_init(inj_ch_trig_timer);
 }
 
+inline uint32_t adc_if_get_phB_LS_CS_SO1_counts(void)
+{
+    return HAL_ADCEx_InjectedGetValue(&adc1_handle__SOx__Vbus, ADC_INJECTED_RANK_1);
+}
+
+inline uint32_t adc_if_get_phC_LS_CS_SO2_counts(void)
+{
+    return  HAL_ADCEx_InjectedGetValue(&adc1_handle__SOx__Vbus, ADC_INJECTED_RANK_2);
+}
+
+inline uint32_t adc_if_get_vbus_counts(void)
+{
+    return  HAL_ADCEx_InjectedGetValue(&adc1_handle__SOx__Vbus, ADC_INJECTED_RANK_3);
+}
+
+
+
+
+static int adc_if_adc2_init(HardwareTimer* timer)
+{
+    ADC_InjectionConfTypeDef sConfigInjected;
+
+    /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) */
+    adc2_handle__M_AUX_temps.Instance = (ADC_TypeDef *)ADC2_BASE;
+
+    __HAL_RCC_ADC2_CLK_ENABLE();
+
+    adc2_handle__M_AUX_temps.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+    adc2_handle__M_AUX_temps.Init.Resolution = ADC_RESOLUTION_12B;
+    adc2_handle__M_AUX_temps.Init.ScanConvMode = ENABLE;
+    adc2_handle__M_AUX_temps.Init.ContinuousConvMode = ENABLE;
+    adc2_handle__M_AUX_temps.Init.DiscontinuousConvMode = DISABLE;
+    adc2_handle__M_AUX_temps.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+    adc2_handle__M_AUX_temps.Init.ExternalTrigConv = ADC_SOFTWARE_START; // for now
+    adc2_handle__M_AUX_temps.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+    adc2_handle__M_AUX_temps.Init.NbrOfConversion = 1;
+    adc2_handle__M_AUX_temps.Init.DMAContinuousRequests = DISABLE;
+    adc2_handle__M_AUX_temps.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+    if ( HAL_ADC_Init(&adc2_handle__M_AUX_temps) != HAL_OK)
+    {
+        return -1;
+    }
+        
+    /** Configures for the selected ADC injected channel 
+     * its corresponding rank in the sequencer and its sample time */
+    sConfigInjected.InjectedNbrOfConversion = 2;
+    sConfigInjected.InjectedSamplingTime = ADC_SAMPLETIME_3CYCLES;
+    sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONVEDGE_RISING;  
+    sConfigInjected.AutoInjectedConv = DISABLE;
+    sConfigInjected.InjectedDiscontinuousConvMode = DISABLE;
+    sConfigInjected.InjectedOffset = 0;
+
+    #if 0
+    sConfigInjected.ExternalTrigInjecConv = ADC_EXTERNALTRIGINJECCONV_T1_TRGO;
+    #else
+    // automating TRGO flag finding - taken from SimpleFOC
+    uint32_t trigger_flag = _timerToInjectedTRGO(timer);
+
+    if(trigger_flag == _TRGO_NOT_AVAILABLE) 
+        return -1;
+    else
+        sConfigInjected.ExternalTrigInjecConv = trigger_flag;
+    #endif 
+
+    // first channel
+    sConfigInjected.InjectedRank = ADC_INJECTED_RANK_1;
+    sConfigInjected.InjectedChannel = _getADCChannel(analogInputToPinName(M_TEMP));
+    if (HAL_ADCEx_InjectedConfigChannel(&adc2_handle__M_AUX_temps, &sConfigInjected) != HAL_OK){ return -1; }
+    
+    
+    // second channel
+    sConfigInjected.InjectedRank = ADC_INJECTED_RANK_2;
+    sConfigInjected.InjectedChannel = _getADCChannel(analogInputToPinName(AUX_TEMP));
+    if (HAL_ADCEx_InjectedConfigChannel(&adc2_handle__M_AUX_temps, &sConfigInjected) != HAL_OK){ return -1; }
+
+    return 0;
+}

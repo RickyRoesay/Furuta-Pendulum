@@ -149,7 +149,6 @@ int pdm_run_control_loop(void)
 
   tmp_q_curr_req = pdm_torque_setpoint_biquad_c.update_and_return_filt_value(tmp_q_curr_req);
   
-  
   motor.move(tmp_q_curr_req);
   motor.loopFOC();
 

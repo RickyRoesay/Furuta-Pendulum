@@ -180,7 +180,6 @@ void setup()
 
   command.add('M', on_motor,"my motor motion");
   command.add('C', pdm_on_constants,"Control Constants");
-  
 
   command.run();
   motor.monitor();

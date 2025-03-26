@@ -5,7 +5,6 @@
 #include <SPI.h>
 #include "gpio.h"
 
-
 #include "stm32f4xx_ll_gpio.h"
 #include "PortNames.h"
 #include "stm32f405xx.h"
@@ -17,14 +16,16 @@ extern ADC_HandleTypeDef adc1_handle__SOx__Vbus;
 
 extern ADC_HandleTypeDef adc2_handle__M_AUX_temps;
 
-void adc_if_init(void);
+void adc_if_init(HardwareTimer* inj_ch_trig_timer);
 
-uint16_t adc_if_get_phB_LS_CS_SO1_counts(void);
-uint16_t adc_if_get_phC_LS_CS_SO2_counts(void);
+inline uint32_t adc_if_get_phB_LS_CS_SO1_counts(void);
+inline uint32_t adc_if_get_phC_LS_CS_SO2_counts(void);
 
 
-uint16_t adc_if_get_vbus_counts(void);
+inline uint32_t adc_if_get_vbus_counts(void);
 float adc_if_get_vbus_v(void);
+
+
 
  
 
