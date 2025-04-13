@@ -7,13 +7,13 @@
 #include "Drivers/AS5048A_MagSenseSPI/AS5048A_MagSenseSPI.hpp" // mag sensor
 #include "Drivers/WS2812B_RGB_LED_Strip/WS2812B_RGB_LED_Strip.hpp" // RGB LED's
 #include "Drivers/ADC_Interface/ADC_Interface.hpp" 
+#include "Drivers/SSD1357_RGB_OLED/SparkFun_RGB_OLED_64x64.h" 
 
 #include "../lib/Arduino-FOC/src/common/foc_utils.h" // sin, cosine, pi, 2pi, etc
 
 #include "CAN_TP/can_tp.hpp"
 
 #include "Biquad.hpp"
-
 
 #include "gpio.h"
 #include "config.hpp"
@@ -42,7 +42,7 @@
 //////////////////////////// CLASS: DECLARATIONS: ////////////////////////////
 
 
-HardwareTimer ctrl_loop_5kHz_timer = HardwareTimer(TIM3);
+HardwareTimer ctrl_loop_5kHz_timer = HardwareTimer(TIM4);
 //HardwareTimer test_tmr = HardwareTimer(TIM8);
 
 /************* DRV8301: DRIVER: *************/
@@ -72,6 +72,8 @@ void on_motor(char* cmd){ command.motor(&motor, cmd); }
 
 WS2812B_RGB_LED_Strip led_strip = WS2812B_RGB_LED_Strip(USB_DP__LED_DO);
 
+RGB_OLED_64x64 rgb_oled = RGB_OLED_64x64();
+
 
 
 
@@ -86,7 +88,7 @@ WS2812B_RGB_LED_Strip led_strip = WS2812B_RGB_LED_Strip(USB_DP__LED_DO);
 
 void Update_IT_callback(void)
 {
-  digitalWrite(GPIO2, HIGH); 
+  //digitalWrite(GPIO2__SSD_nRST, HIGH); 
   
   pdm_run_control_loop();
   
@@ -99,7 +101,7 @@ void Update_IT_callback(void)
                           encoder.getMechanicalAngle(),
                           0);
   
-  digitalWrite(GPIO2, LOW); 
+  //digitalWrite(GPIO2__SSD_nRST, LOW); 
 }
 
 
@@ -115,24 +117,25 @@ void setup()
   hw_serial.begin(250000); 
 
   /** only used for timing analysis for now */
-  pinMode(GPIO1, OUTPUT);
-  pinMode(GPIO2, OUTPUT);
-  digitalWrite(GPIO1, LOW);
-  digitalWrite(GPIO2, LOW);
+  //pinMode(GPIO1__SSD_nCS, OUTPUT);
+  //pinMode(GPIO2__SSD_nRST, OUTPUT);
+  //digitalWrite(GPIO1__SSD_nCS, LOW);
+  //digitalWrite(GPIO2__SSD_nRST, LOW);
   
 
 
 
-  led_strip.init_dma_and_timer_peripherals(9);
+  led_strip.init_dma_and_timer_peripherals(50);
 
-  led_strip.modify_pixel_buffer_all_leds(5, 5, 5);
+  led_strip.modify_pixel_buffer_all_leds(15, 8, 5);
 
-  if(led_strip.process_bitfield_array(9) == WS2812B_READY_TO_UPLOAD_BITSTREAM)
+  if(led_strip.process_bitfield_array(55) == WS2812B_READY_TO_UPLOAD_BITSTREAM)
   {
     (void)led_strip.write_bitfield_array_via_dma();
   }
   
-
+  rgb_oled.begin(USB_DM__SSD_DS, GPIO2__SSD_nRST, GPIO1__SSD_nCS, SPI_2, 8000000);
+  rgb_oled.fillDisplay(25);
 
   /** Prescaler is automatically set when setting overflow with format != tick */
   ctrl_loop_5kHz_timer.setOverflow(200UL, MICROSEC_FORMAT);
@@ -144,11 +147,10 @@ void setup()
   digitalWrite(AUX_L, LOW);
 
   /** Set as inputs to be configured in the simpleFOC's hardware specific
-   * "_adc_init" in stm32f4_hal.cpp file.  We will used dual adc mode, 
-   * of type "injected Simultaneous" so we can read the raw values
-   * at any time (either in the low priority tasks or in the JEOC ISR) */
-  pinMode(M_TEMP,   INPUT);
-  pinMode(AUX_TEMP, INPUT);
+   * "_adc_init" in stm32f4_hal.cpp file, so we can measure bus voltage 
+   * at 20kHz just like with current sensors so control loops can run on 
+   * data. We don't use a brake resistor but future uses for the ODESC 
+   * might. */
   pinMode(VBUS_SNS, INPUT);
   
   // init magnetic angle sensor
@@ -174,6 +176,8 @@ void setup()
 
   can_tp_init();
 
+  adc_if_init(&ctrl_loop_5kHz_timer);
+
   gimbal_init(hw_serial);
 
   pdm_torque_setpoint_biquad_c.set_steady_state_val(0.0f);
@@ -198,11 +202,26 @@ void setup()
 
 
 
-
+float hue = 0.0f;
+uint8_t value = 30;
 
 void loop() 
 {
-  //digitalWrite(GPIO2, HIGH); 
+  //digitalWrite(GPIO2__SSD_nRST, HIGH); 
+
+
+  led_strip.modify_pixel_buffer_all_leds(hue, value);
+
+  hue += 0.01f;
+  if(hue >= 360.0f)
+  {
+    hue = 0.0f;
+  }
+
+  if(led_strip.process_bitfield_array(55) == WS2812B_READY_TO_UPLOAD_BITSTREAM)
+  {
+    (void)led_strip.write_bitfield_array_via_dma();
+  }
 
   command.run();
   motor.monitor();
@@ -221,19 +240,30 @@ void loop()
   }
   else if(pdm.D == 2.0f)
   {
-    uint32_t test = HAL_ADCEx_InjectedGetValue(&adc1_handle__SOx__Vbus, ADC_INJECTED_RANK_1);
+    uint32_t test = adc_if_get_phB_LS_CS_SO1_counts();
     hw_serial.print(test); //
     hw_serial.print("    ");
-    test = HAL_ADCEx_InjectedGetValue(&adc1_handle__SOx__Vbus, ADC_INJECTED_RANK_2);
+    test = adc_if_get_phC_LS_CS_SO2_counts();
     hw_serial.print(test);
     hw_serial.print("    ");
-    test = HAL_ADCEx_InjectedGetValue(&adc1_handle__SOx__Vbus, ADC_INJECTED_RANK_3);
+    test = adc_if_get_vbus_counts();
+    hw_serial.println(test);
+  }
+  else if(pdm.D == 3.0f)
+  {
+    float test = adc_if_get_vbus_v();
+    hw_serial.print(test); //
+    hw_serial.print("    ");
+    test = adc_if_get_pcb_temp_near_motor_fets_C();
+    hw_serial.print(test);
+    hw_serial.print("    ");
+    test = adc_if_get_pcb_temp_near_aux_fets_C();
     hw_serial.println(test);
   }
 
   pdm_run_phi_offset_correction_checks();
   
-  //digitalWrite(GPIO2, LOW);
+  //digitalWrite(GPIO2__SSD_nRST, LOW);
 }
 
 

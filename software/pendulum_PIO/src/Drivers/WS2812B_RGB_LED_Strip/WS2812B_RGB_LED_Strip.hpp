@@ -6,7 +6,7 @@
 //#include "stm32f405xx.h"
 
 
-/** The order of operations for this asynchronous driver is as follows:
+/** The order of operations for this concurrent driver is as follows:
  *      1). Write to pixel buffer, actually choosing what the next "frame" will be.
  *      2). Process Bitfield array until status is "WS2812B_READY_TO_UPLOAD_BITSTREAM."
  *      3). Trigger dma transfer using "write_bitfield_array_via_dma" function.
@@ -64,12 +64,13 @@ typedef enum {
     WS2812B_READY_TO_UPLOAD_BITSTREAM, 
 } WS2812B_Status_e;
 
-
 typedef struct {
     uint8_t red;
     uint8_t green;
     uint8_t blue;
-} WS2812B_Led_Pixel_Info_s;
+} WS2812B_Led_Pixel_Colors_s;
+
+
 
 
 class WS2812B_RGB_LED_Strip
@@ -89,9 +90,12 @@ class WS2812B_RGB_LED_Strip
         WS2812B_Status_e get_status();
 
         void modify_pixel_buffer_all_leds(uint8_t red, uint8_t green, uint8_t blue);
+        void modify_pixel_buffer_all_leds(float hue_degrees, uint8_t value);
 
         bool modify_pixel_buffer_single(uint8_t buffer_idx,
                                         uint8_t red, uint8_t green, uint8_t blue);
+        bool modify_pixel_buffer_single(uint8_t buffer_idx,
+                                        float hue_degrees, uint8_t value); // max value == 255
              
                                             
         /** returns the status of the driver.  This function
@@ -114,13 +118,15 @@ class WS2812B_RGB_LED_Strip
         bool set_bit_masks_and_dma_dest_pointer_from_arduino_pin_macro(uint32_t ulPin);
         
         inline void write_pixel_data_to_bitstream(uint32_t *ptr_to_bitstream, 
-                                            WS2812B_Led_Pixel_Info_s * ptr_to_pixel_info);
+                                            WS2812B_Led_Pixel_Colors_s * ptr_to_pixel_info);
         
         inline void write_bit_data_to_bitstream(uint32_t *ptr_to_bitstream, uint8_t bit_level);
 
         inline void write_reset_data_to_bitstream(WS2812B_Bitstream_Index_e bitstream_number);
             
         inline bool is_dma_transfer_in_progress(void);
+
+        inline WS2812B_Led_Pixel_Colors_s hue_value_to_rgb(float hue_degrees, uint8_t value);
 
         int DO_gpio;
 
@@ -133,7 +139,7 @@ class WS2812B_RGB_LED_Strip
 
         WS2812B_Status_e status = WS2812B_INIT_PERIPHERALS;
 
-        WS2812B_Led_Pixel_Info_s led_pixel_buf[WS2812B_MAX_NUM_OF_LEDS];
+        WS2812B_Led_Pixel_Colors_s led_pixel_buf[WS2812B_MAX_NUM_OF_LEDS];
         uint8_t next_led_buf_idx_to_process;
 
         /** This is the number of LED's that we intend to write to 

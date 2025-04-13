@@ -1,8 +1,8 @@
 #ifndef __GPIO_H
 #define __GPIO_H
 
-#define	GPIO1	        PA0 
-#define	GPIO2	        PA1
+#define	GPIO1__SSD_nCS  PA0 
+#define	GPIO2__SSD_nRST PA1
 #define	GPIO3_UART_TX	PA2 // use this as uart4 tx
 #define	GPIO4_UART_RX	PA3 // use this as uart4 rx
 
@@ -19,8 +19,8 @@
 #define	ENC_B	        PB5
 #define	ENC_Z	        PC9  
 
-#define	USB_DM	      PA11  // yellow wire
-#define	USB_DP__LED_DO	      PA12  // green wire
+#define	USB_DM__SSD_DS  PA11  // yellow wire
+#define	USB_DP__LED_DO  PA12  // green wire
 
 #define	nFAULT	      PD2   
 #define	EN_GATE	      PB12

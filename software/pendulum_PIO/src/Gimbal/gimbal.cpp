@@ -31,7 +31,7 @@ LowsideCurrentSense current_sense = LowsideCurrentSense(SHUNT_RESISTANCE_OHMS,
 // channel A and B callbacks
 void doA() { encoder.handleA(); }
 void doB() { encoder.handleB(); }
-//void doZ() { encoder.handleIndex(); }
+void doZ() { encoder.handleIndex(); }
 
 
 
