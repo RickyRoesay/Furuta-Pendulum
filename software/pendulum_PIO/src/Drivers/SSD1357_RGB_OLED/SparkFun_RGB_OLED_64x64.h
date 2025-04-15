@@ -28,7 +28,7 @@ class RGB_OLED_64x64 : public SSD1357 {
 private:
 protected:
 
-	boolean _isInverted, _isFlippedH, _isFlippedV, _incV, _coSwapped, _scanReversed;
+	bool _isInverted, _isFlippedH, _isFlippedV, _incV, _coSwapped, _scanReversed;
 
 	uint8_t _colorMode;
 
@@ -46,10 +46,10 @@ public:
     void display(void);
     // void setCursor(uint8_t x, uint8_t y);
 
-    void invert(boolean inv);
+    void invert(bool inv);
     // void setContrast(uint8_t contrast);
-    // void flipVertical(boolean flip);
-    void flipHorizontal(boolean flip);
+    // void flipVertical(bool flip);
+    void flipHorizontal(bool flip);
 
     
 
@@ -71,7 +71,7 @@ public:
     // uint8_t getFontHeight(void);
     // uint8_t getTotalFonts(void);
     // uint8_t getFontType(void);
-    // boolean setFontType(uint8_t type);
+    // bool setFontType(uint8_t type);
     // uint8_t getFontStartChar(void);
     // uint8_t getFontTotalChar(void);
     void setCursor(uint8_t x, uint8_t y);

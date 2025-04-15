@@ -113,6 +113,7 @@ WS2812B_Status_e  WS2812B_RGB_LED_Strip::init_dma_and_timer_peripherals(uint8_t 
 
     write_reset_data_to_bitstream(WS2812B_BITSTREAM_0);
     write_reset_data_to_bitstream(WS2812B_BITSTREAM_1);
+    status = WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM;
   }
   return status;
 }
@@ -142,6 +143,7 @@ bool WS2812B_RGB_LED_Strip::modify_pixel_buffer_single(uint8_t buffer_idx,
   /** Reset to 0 signaling the buffer has been updated since the last time 
    * any WS2812B driver functions have been called. */
   next_led_buf_idx_to_process = 0;
+  status = WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM;
 
   return 1;
 }
@@ -164,6 +166,7 @@ bool WS2812B_RGB_LED_Strip::modify_pixel_buffer_single(uint8_t buffer_idx,
   /** Reset to 0 signaling the buffer has been updated since the last time 
    * any WS2812B driver functions have been called. */
   next_led_buf_idx_to_process = 0;
+  status = WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM;
 
   return 1;
 }
@@ -184,6 +187,7 @@ void WS2812B_RGB_LED_Strip::modify_pixel_buffer_all_leds(uint8_t red, uint8_t gr
   /** Reset to 0 signaling the buffer has been updated since the last time 
    * any WS2812B driver functions have been called. */
   next_led_buf_idx_to_process = 0;
+  status = WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM;
 }
 void WS2812B_RGB_LED_Strip::modify_pixel_buffer_all_leds(float hue_degrees, uint8_t value)
 {
@@ -199,6 +203,7 @@ void WS2812B_RGB_LED_Strip::modify_pixel_buffer_all_leds(float hue_degrees, uint
   /** Reset to 0 signaling the buffer has been updated since the last time 
    * any WS2812B driver functions have been called. */
   next_led_buf_idx_to_process = 0;
+  status = WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM;
 }
 
 
@@ -248,13 +253,10 @@ WS2812B_Status_e  WS2812B_RGB_LED_Strip::process_bitfield_array(uint32_t num_of_
   if(is_dma_transfer_in_progress() == true)
     status = WS2812B_TRANSMITTING_DATA;
   else if(next_led_buf_idx_to_process >= active_led_num)
-  {
     status = WS2812B_READY_TO_UPLOAD_BITSTREAM;
-    next_led_buf_idx_to_process = 0;
-  }
   else
-    status = WS2812B_WAITING_TO_PROCESS_PIXEL_DATA;
-
+    status = WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM;
+  
   return status;
 }
 
@@ -267,7 +269,7 @@ bool WS2812B_RGB_LED_Strip::write_bitfield_array_via_dma()
   if((dma_handle.Instance->CR & 0x00000001)
   || status == WS2812B_INIT_FAIL)
     return 0;
-
+  
   uint8_t tmp_bitstream_swap_space = bitstream_idx_for_led_buf;
   bitstream_idx_for_led_buf = bitstream_idx_for_dma;
   bitstream_idx_for_dma = tmp_bitstream_swap_space;
@@ -275,16 +277,17 @@ bool WS2812B_RGB_LED_Strip::write_bitfield_array_via_dma()
   /** Reset to 0 signaling the buffer has been updated since the last time 
    * any WS2812B driver functions have been called. */
   next_led_buf_idx_to_process = 0;
-
+  
   /** DMA stream interrupts flags must be cleared before enabling DMA. */
   DMA2->LIFCR = 0xFFFFFFFF;
-
+  
   dma_handle.Instance->NDTR = WS2812B_NUM_OF_GPIO_WRITES_TOTAL;
   dma_handle.Instance->M0AR = (uint32_t)bitstream[bitstream_idx_for_dma];
   __HAL_DMA_ENABLE(&dma_handle);
-
+  
   status = WS2812B_TRANSMITTING_DATA;
-
+  next_led_buf_idx_to_process = 0;
+  
   return 1;
 }
 

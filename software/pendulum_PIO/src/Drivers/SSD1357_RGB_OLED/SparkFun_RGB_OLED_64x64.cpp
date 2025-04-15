@@ -124,7 +124,7 @@ void RGB_OLED_64x64::display(void)						// Because there is no local data (alway
 
 
 
-void RGB_OLED_64x64::invert(boolean inv)
+void RGB_OLED_64x64::invert(bool inv)
 {
 	if(inv)
 	{
@@ -141,10 +141,10 @@ void RGB_OLED_64x64::invert(boolean inv)
 
 // }
 
-// void RGB_OLED_64x64::flipVertical(boolean flip)		// No support yet
+// void RGB_OLED_64x64::flipVertical(bool flip)		// No support yet
 
 
-void RGB_OLED_64x64::flipHorizontal(boolean flip)
+void RGB_OLED_64x64::flipHorizontal(bool flip)
 {
 	_isFlippedH = flip;
 	setRemapColorDepth(_incV, flip, _coSwapped, _scanReversed, true, _colorMode);

@@ -18,7 +18,8 @@
  * access to any signal measured via the STM32's ADC's.
  * These signals include: 
  * - SO1 & SO2 Phase Current Shunt Amplifier measurement via DRV8301. 
- * - "M_TEMP" and "AUX_TEMP" NTC's, part numbers are believed to be*/
+ * - "M_TEMP" and "AUX_TEMP" NTC's, part numbers are believed to be:
+ * NXP15XH103F03RC based on the ODrive Bill of Materials. */
 
 
 

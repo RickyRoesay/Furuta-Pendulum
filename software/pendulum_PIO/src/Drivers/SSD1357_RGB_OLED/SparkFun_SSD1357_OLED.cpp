@@ -1203,10 +1203,10 @@ void SSD1357::rectFillRAM(uint8_t x, uint8_t y, uint8_t width, uint8_t height, u
 void SSD1357::fast_filled_rectangle(int8_t x0, int8_t y0, int8_t x1, int8_t y1, int16_t value)
 {
 	// This uses the boundaries on write_ram to quickly fill a given rectangle
-	boolean x0offscreen = false;
-	boolean x1offscreen = false;
-	boolean y0offscreen = false;
-	boolean y1offscreen = false;
+	bool x0offscreen = false;
+	bool x1offscreen = false;
+	bool y0offscreen = false;
+	bool y1offscreen = false;
 
 	// Ensure bounds are good
 	if(x0 >= SSD1357_MAX_WIDTH)
@@ -1414,7 +1414,7 @@ void SSD1357::plotLineHigh(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint1
   }
 }
 
-void SSD1357::circle_eight(uint8_t xc, uint8_t yc, int16_t dx, int16_t dy, uint16_t value, boolean fill)
+void SSD1357::circle_eight(uint8_t xc, uint8_t yc, int16_t dx, int16_t dy, uint16_t value, bool fill)
 {
 	setPixelRAM(xc+dx, yc+dy, value);
 	setPixelRAM(xc-dx, yc+dy, value);
@@ -1434,7 +1434,7 @@ void SSD1357::circle_eight(uint8_t xc, uint8_t yc, int16_t dx, int16_t dy, uint1
 	}
 }
 
-void SSD1357::circle_Bresenham(uint8_t x, uint8_t y, uint8_t radius, uint16_t value, boolean fill)
+void SSD1357::circle_Bresenham(uint8_t x, uint8_t y, uint8_t radius, uint16_t value, bool fill)
 {
 	// Thanks to the tutorial here: https://www.geeksforgeeks.org/bresenhams-circle-drawing-algorithm/
 	uint8_t dx = 0;
@@ -1472,7 +1472,7 @@ void SSD1357::circle_Bresenham(uint8_t x, uint8_t y, uint8_t radius, uint16_t va
 	}
 }
 
-void SSD1357::circle_midpoint(uint8_t xc, uint8_t yc, uint8_t radius, uint16_t value, boolean fill)
+void SSD1357::circle_midpoint(uint8_t xc, uint8_t yc, uint8_t radius, uint16_t value, bool fill)
 {		
 	// Thanks to the tutorial here: https://www.geeksforgeeks.org/mid-point-circle-drawing-algorithm/
     uint8_t dx = radius;

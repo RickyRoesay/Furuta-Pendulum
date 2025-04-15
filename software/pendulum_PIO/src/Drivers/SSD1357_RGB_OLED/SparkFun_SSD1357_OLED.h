@@ -52,7 +52,7 @@ public:
 	uint16_t margin_x, margin_y;
 	uint16_t reset_x, reset_y;
 
-	boolean _prevWriteCausedNewline;
+	bool _prevWriteCausedNewline;
 
 	MicroviewMonochromeProgMemBMPFont(const unsigned char * pMap, uint8_t * pPad, uint8_t headerSize);
 
@@ -181,9 +181,9 @@ protected:
 	void plotLineLow(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint16_t value, uint8_t width);
 	void plotLineHigh(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint16_t value, uint8_t width);
 
-	void circle_Bresenham(uint8_t x, uint8_t y, uint8_t radius, uint16_t value, boolean fill);
-	void circle_midpoint(uint8_t x, uint8_t y, uint8_t radius, uint16_t value, boolean fill);
-	void circle_eight(uint8_t xc, uint8_t yc, int16_t dx, int16_t dy, uint16_t value, boolean fill);
+	void circle_Bresenham(uint8_t x, uint8_t y, uint8_t radius, uint16_t value, bool fill);
+	void circle_midpoint(uint8_t x, uint8_t y, uint8_t radius, uint16_t value, bool fill);
+	void circle_eight(uint8_t xc, uint8_t yc, int16_t dx, int16_t dy, uint16_t value, bool fill);
 
 	void fast_filled_rectangle(int8_t x0, int8_t y0, int8_t x1, int8_t y1, int16_t value);
 

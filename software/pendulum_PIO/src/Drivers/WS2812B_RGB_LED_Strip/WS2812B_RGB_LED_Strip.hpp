@@ -59,7 +59,7 @@ typedef enum : uint8_t {
 typedef enum {
     WS2812B_INIT_PERIPHERALS, 
     WS2812B_INIT_FAIL, 
-    WS2812B_WAITING_TO_PROCESS_PIXEL_DATA,  
+    WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM,  
     WS2812B_TRANSMITTING_DATA, 
     WS2812B_READY_TO_UPLOAD_BITSTREAM, 
 } WS2812B_Status_e;
@@ -84,10 +84,10 @@ class WS2812B_RGB_LED_Strip
          * (within 1 to WS2812B_MAX_NUM_OF_LEDS).
          * Returns false if there was an issue initializing peripherals, the
          * DO_gpio_ pin is not valid (passed into class constructor) or an invalid 
-         * parameter was passed (0, >WS2812B_MAX_NUM_OF_LEDS). */
+         * parameter was passed (0, > WS2812B_MAX_NUM_OF_LEDS). */
         bool update_num_of_leds_to_cmd(uint8_t num_of_leds_to_cmd);
 
-        WS2812B_Status_e get_status();
+        WS2812B_Status_e get_status() { return status; }
 
         void modify_pixel_buffer_all_leds(uint8_t red, uint8_t green, uint8_t blue);
         void modify_pixel_buffer_all_leds(float hue_degrees, uint8_t value);
