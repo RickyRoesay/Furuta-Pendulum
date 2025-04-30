@@ -51,6 +51,52 @@ WS2812B_RGB_LED_Strip::WS2812B_RGB_LED_Strip(int DO_gpio_)
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
+
+WS2812B_Status_e WS2812B_RGB_LED_Strip::get_status(void)
+{
+  bool tmp_is_dma_transfer_in_progress = is_dma_transfer_in_progress();
+  switch(status)
+  {
+    case  WS2812B_INIT_PERIPHERALS:
+    case  WS2812B_INIT_FAIL:
+      // do nothing, keep status the same
+    break;
+    
+    case  WS2812B_TRANSMITTING_DATA:
+      if(tmp_is_dma_transfer_in_progress == true)
+      {
+        // do nothing, keep status the same
+      }
+      else
+      {
+        status = WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM;  
+      }
+    break; 
+
+    case  WS2812B_READY_TO_UPLOAD_BITSTREAM:   
+    case  WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM: 
+    {
+      if(tmp_is_dma_transfer_in_progress == true)
+      {
+        status = WS2812B_TRANSMITTING_DATA;
+      }
+      else
+      {
+        // do nothing
+      }
+    }
+    break;
+  }
+
+  return status;
+}
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////
+
 WS2812B_Status_e  WS2812B_RGB_LED_Strip::init_dma_and_timer_peripherals(uint8_t num_of_leds_to_cmd)
 {
   if(num_of_leds_to_cmd > WS2812B_MAX_NUM_OF_LEDS
@@ -236,8 +282,9 @@ WS2812B_Status_e  WS2812B_RGB_LED_Strip::process_bitfield_array(uint32_t num_of_
   uint32_t tmp_bitfield_idx_offset = WS2812B_NUM_OF_BITS_PER_RESET 
                                     + (WS2812B_NUM_OF_GPIO_WRITES_PER_PIXEL * next_led_buf_idx_to_process);
 
-  if(status == WS2812B_INIT_FAIL)
-    return WS2812B_INIT_FAIL;
+  if(status == WS2812B_INIT_FAIL
+  || status == WS2812B_INIT_PERIPHERALS)
+    return status;
     
   while(tmp_num_of_pixels_written_to < num_of_pixels_to_process
   && next_led_buf_idx_to_process < active_led_num)
@@ -264,31 +311,47 @@ WS2812B_Status_e  WS2812B_RGB_LED_Strip::process_bitfield_array(uint32_t num_of_
 
 
 
-bool WS2812B_RGB_LED_Strip::write_bitfield_array_via_dma()
+WS2812B_Status_e WS2812B_RGB_LED_Strip::write_bitfield_array_via_dma(void)
 {
-  if((dma_handle.Instance->CR & 0x00000001)
-  || status == WS2812B_INIT_FAIL)
-    return 0;
-  
-  uint8_t tmp_bitstream_swap_space = bitstream_idx_for_led_buf;
-  bitstream_idx_for_led_buf = bitstream_idx_for_dma;
-  bitstream_idx_for_dma = tmp_bitstream_swap_space;
-  
-  /** Reset to 0 signaling the buffer has been updated since the last time 
-   * any WS2812B driver functions have been called. */
-  next_led_buf_idx_to_process = 0;
-  
-  /** DMA stream interrupts flags must be cleared before enabling DMA. */
-  DMA2->LIFCR = 0xFFFFFFFF;
-  
-  dma_handle.Instance->NDTR = WS2812B_NUM_OF_GPIO_WRITES_TOTAL;
-  dma_handle.Instance->M0AR = (uint32_t)bitstream[bitstream_idx_for_dma];
-  __HAL_DMA_ENABLE(&dma_handle);
-  
-  status = WS2812B_TRANSMITTING_DATA;
-  next_led_buf_idx_to_process = 0;
-  
-  return 1;
+  switch(status)
+  {
+    case  WS2812B_INIT_PERIPHERALS:
+    case  WS2812B_INIT_FAIL:
+      // do nothing
+    break;
+    
+    case  WS2812B_TRANSMITTING_DATA:
+    case  WS2812B_READY_TO_UPLOAD_BITSTREAM:   
+    case  WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM: 
+    {
+      if(is_dma_transfer_in_progress() == false)
+      {
+        uint8_t tmp_bitstream_swap_space = bitstream_idx_for_led_buf;
+        bitstream_idx_for_led_buf = bitstream_idx_for_dma;
+        bitstream_idx_for_dma = tmp_bitstream_swap_space;
+        
+        /** Reset to 0 signaling the buffer has been updated since the last time 
+        * any WS2812B driver functions have been called. */
+        next_led_buf_idx_to_process = 0;
+        
+        /** DMA stream interrupts flags must be cleared before enabling DMA. */
+        DMA2->LIFCR = 0xFFFFFFFF;
+        
+        dma_handle.Instance->NDTR = WS2812B_NUM_OF_GPIO_WRITES_TOTAL;
+        dma_handle.Instance->M0AR = (uint32_t)bitstream[bitstream_idx_for_dma];
+        __HAL_DMA_ENABLE(&dma_handle);
+      }
+      else
+      {
+        // do nothing
+      }
+
+      status = WS2812B_TRANSMITTING_DATA;
+    }
+    break;
+  }
+
+  return status;
 }
 
 

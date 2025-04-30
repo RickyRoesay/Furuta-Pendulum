@@ -56,6 +56,11 @@ typedef enum : uint8_t {
     WS2812B_NUM_OF_BITSTREAMS = 2
 } WS2812B_Bitstream_Index_e;
 
+/** NOTE: It is possible to process pixel buffer and
+ * the next bitstream data while the DMA transfer is active.
+ * 
+ * However, when the DMA transfer is active, the status will 
+ * always be "WS2812B_TRANSMITTING_DATA." */
 typedef enum {
     WS2812B_INIT_PERIPHERALS, 
     WS2812B_INIT_FAIL, 
@@ -87,7 +92,7 @@ class WS2812B_RGB_LED_Strip
          * parameter was passed (0, > WS2812B_MAX_NUM_OF_LEDS). */
         bool update_num_of_leds_to_cmd(uint8_t num_of_leds_to_cmd);
 
-        WS2812B_Status_e get_status() { return status; }
+        WS2812B_Status_e get_status(void);
 
         void modify_pixel_buffer_all_leds(uint8_t red, uint8_t green, uint8_t blue);
         void modify_pixel_buffer_all_leds(float hue_degrees, uint8_t value);
@@ -107,11 +112,9 @@ class WS2812B_RGB_LED_Strip
         /** triggers DMA to start transfer of the bitfield array into
          * the GPIO peripheral BSRR register, which then pulses the 
          * gpio pin configured as the LED data out. */
-        bool write_bitfield_array_via_dma(void);
+        WS2812B_Status_e WS2812B_RGB_LED_Strip::write_bitfield_array_via_dma(void);
 
-        
         void set_gpio_pin_level(bool pin_level); // used for testing
-        
         
     private:
         /** Return false if the ulPin is not a valid digital pin on the MCU. */

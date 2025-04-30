@@ -27,6 +27,17 @@
 
 
 
+/** this is meant to be a subset of
+ * the HSV (Hue, Saturation, Value) color model. 
+ * We are not using saturation, since it's almost impossible to 
+ * change saturation on a single pixel RGBs. */
+typedef struct {
+    float hue;
+    // ignoring saturation since it's very difficult to modulate that on single pixel LED's.
+    uint8_t value;
+} RGB_Wrapper_HV_Color_s;
+
+
 typedef enum : uint8_t {
     RGB_Wrapper__Unused_Pixel = 0,  // default value
     RGB_Wrapper__Button_Pixel,  // blink a color when pressed or depressed, takes button state as input
@@ -36,41 +47,20 @@ typedef enum : uint8_t {
     RGB_Wrapper__Circle_Pixel, // one of the LED's that iluminate around the pendulum 
 } RGB_Wrapper_Pixel_Type_e;
 
+
 typedef enum : uint8_t {
-    RGB_Wrapper_Circle__Phi_Rainbow = 0, // whole circle is illuminated a different color as a function of phi
+    RGB_Wrapper_Circle__Unset = 0,
+    RGB_Wrapper_Circle__Phi_Rainbow, // whole circle is illuminated a different color as a function of phi
     RGB_Wrapper_Circle__Phi_Pulse, // whole circle is illuminated a solid color but different value as f(phi)
     RGB_Wrapper_Circle__Phi_Theta_Q, // lights dim around theta as a function of 1+|x|^(1/2)
-    RGB_Wrapper_Circle__Phi_Theta_Solid_Value, // lights do not dim around theta
+    RGB_Wrapper_Circle__Phi_Theta_Solid_Value, // lights do not dim around theta, they only track position
+    
+    /** LED's right under the pendulum illuminate as a function of Phi, and colors stay
+     * illuminated for a slight time after the pendulum moves so that it decays in 
+     * brightness. */
     RGB_Wrapper_Circle__Phi_Theta_Persistence_Rainbow,
-    RGB_Wrapper_Circle__Phi_Theta_Persistence_Solid,
+    RGB_Wrapper_Circle__Phi_Theta_Persistence_Solid, // same thing as rainbow but with a solid color.
 } RGB_Wrapper_Circle_Type_e;
-
-
-typedef struct {
-    float hue;
-    uint8_t value;
-} RGB_Wrapper_HV_Color_s;
-
-
-typedef struct {
-    RGB_Wrapper_Pixel_Type_e pixel_type;
-    RGB_Wrapper_HV_Color_s colors[MAX_BUTTON_COLORS]; // for button or blink pattern pixels
-    // button class pointer
-    uint8_t blink_pulse_or_rainbow_max_value;
-    
-    /** this will either scale from 0 to 1 for blink, or 0 to "(float)blink_pulse_or_rainbow_max_value"
-     * for pulse LED pixel types. */
-    float blink_pulse_value_to_increment_per_update;
-    float rainbow_hue_to_increment_per_update;
-    float blink_pulse_accumulator;
-    bool is_blink_pulse_incrementing_up;
-    
-    bool normal_pixel_update(void);
-    
-    RGB_Wrapper_HV_Color_s color_buf;
-    uint8_t last_adjacent_idx_of_similar_pixel_setting; 
-} RGB_Wrapper_Pixel_Info_s;
-
 
 
 typedef enum {
@@ -82,6 +72,53 @@ typedef enum {
     RGB_Wrapper_Status_PROCESSING_PIXEL_BITSTREAM,  
     RGB_Wrapper_Status_SEND_OUT_PIXEL_BITSTREAM, 
 } RGB_Wrapper_Status_e;
+
+
+
+
+
+
+typedef struct {
+    RGB_Wrapper_Pixel_Type_e pixel_type;
+    RGB_Wrapper_HV_Color_s colors[MAX_BUTTON_COLORS]; // for button or blink pattern pixels
+    // button class pointer
+
+    /** Accumulation for different LED modes: 
+     * 
+     * /////////////// BLINK: ////////////
+     * - Scales between 0 and 1, unit is in in time.
+     * - When the accumulator >= 1.0, LED turns on and accumulator
+     * is incremented down until the accumulator is < 0.
+     * When accumulator < 0, the LED turns off and the accumuator starts 
+     * incrementing up. 
+     * - Static Hue and Value of the led when it's ON will be stored 
+     * in colors[0] on pixel setting initialization.
+     * 
+     * /////////////// PULSE: ////////////
+     * - Scales between 0 and blink_pulse_hue_max_accumulator_val.
+     * - Units are in "value" (HSV), aka LED brightness.
+     * - Accumulator has similar up/down incrementation as blink,
+     * but the difference is that the accumulator is converted to a 
+     * a uint8 and sent as the LED pixel's "Value" in Hue/Value.  
+     * - Max value and static hue will be stored in colors[0] on initialization.
+     * 
+     * /////////////// RAINBOW: ////////////
+     * - Right now it simply increments up or down based on the polarity
+     * of "blink_pulse_hue_increment_val" and cycles all the way around the rainbow.
+     * - Units are in "Hue" (HSV), aka rainbow color as a function of 0-360 degrees.
+     * - Static value will be stored in colors[0] on initialization. */
+    float blink_pulse_hue_max_accumulator_val;
+    float blink_pulse_hue_accumulator;
+    float blink_pulse_hue_increment_val;
+
+    bool is_blink_pulse_incrementing_up;
+    
+    RGB_Wrapper_HV_Color_s color_buf;
+    uint8_t last_adjacent_idx_of_similar_pixel_setting; 
+} RGB_Wrapper_Pixel_Info_s;
+
+
+
 
 
 class RGB_Wrapper
@@ -96,6 +133,10 @@ class RGB_Wrapper
          * pin setting registers. */
         RGB_Wrapper_Status_e init_periphs_for_WS2812B(void);
 
+        /** Calling this function marks the end of the "INIT_PIXEL_TYPES"
+         * state as long as all of the led's to command have their 
+         * settings configured. This must be called after configuring or
+         * reconfiguring the pixel settings. */
         RGB_Wrapper_Status_e finish_initializing_pixel_types(void);
         
         RGB_Wrapper_Status_e set_blink_pixel_settings(uint8_t blink_start_idx, \
@@ -105,19 +146,26 @@ class RGB_Wrapper
                                                         bool increment_direction_start, \
                                                         RGB_Wrapper_HV_Color_s color);
         
+        RGB_Wrapper_Status_e set_pulse_pixel_settings(uint8_t pulse_start_idx, \
+                                                        uint8_t pulse_end_idx, \
+                                                        float val_increment_start_point, \
+                                                        float val_increment_update_val, \
+                                                        bool val_increment_direction_start, \
+                                                        RGB_Wrapper_HV_Color_s color_with_max_value);
+        
         RGB_Wrapper_Status_e set_rainbow_pixel_settings(uint8_t rainbow_start_idx, \
                                                         uint8_t rainbow_end_idx, \
-                                                        uint8_t max_value, \
-                                                        float hue_increment_start_point, \
-                                                        float hue_increment_update_val, \
-                                                        bool hue_increment_direction_start);
+                                                        uint8_t brightness_value, \
+                                                        float hue_start_point, \
+                                                        float hue_increment_update_val);
 
-        RGB_Wrapper_Status_e set_circle_pixel_settings(uint8_t circle_start_idx, \
-                                                        uint8_t circle_end_idx, \
-                                                        RGB_Wrapper_Circle_Type_e circle_type, \
-                                                        float phi_upright_hue_or_value, \
-                                                        float light_persistence_coefficient, \
-                                                        float led_width_of_inv_sqrt_func_m1_to_p1);
+        RGB_Wrapper_Status_e set_circle_pixel_settings(uint8_t circle_start_idx_, \
+                                                        uint8_t circle_end_idx_, \
+                                                        RGB_Wrapper_Circle_Type_e circle_type_, \
+                                                        float phi_upright_hue_or_value_, \
+                                                        float light_persistence_coefficient_, \
+                                                        float num_of_circle_leds_on_at_once_,
+                                                        RGB_Wrapper_HV_Color_s init_color_data);
         
         RGB_Wrapper_Status_e set_button_pixel_settings(uint8_t button_start_idx, \
                                                         uint8_t button_end_idx, \
@@ -125,23 +173,15 @@ class RGB_Wrapper
                                                         RGB_Wrapper_HV_Color_s color_1, \
                                                         RGB_Wrapper_HV_Color_s color_2, \
                                                         RGB_Wrapper_HV_Color_s color_3);
-        
-        RGB_Wrapper_Status_e set_pulse_pixel_settings(uint8_t pulse_start_idx, \
-                                                        uint8_t pulse_end_idx, \
-                                                        float val_increment_start_point, \
-                                                        float val_increment_update_val, \
-                                                        bool val_increment_direction_start, \
-                                                        RGB_Wrapper_HV_Color_s color_with_max_value);
 
-
-        RGB_Wrapper_Status_e update_pixels(void);
-        RGB_Wrapper_Status_e update_pixels(float pdm_phi);
         RGB_Wrapper_Status_e update_pixels(float pdm_phi, float pdm_theta);
-
         
     private:
         WS2812B_RGB_LED_Strip *led_strip_drv_ptr = NULL;
         uint8_t num_of_leds_to_cmd;
+        uint8_t num_of_circle_pixels;
+        uint8_t circle_start_idx;
+        uint8_t circle_end_idx;
         WS2812B_Status_e driver_status;
         
         RGB_Wrapper_Status_e status = RGB_Wrapper_Status_RGB_DRIVER_UNLINKED;
@@ -152,16 +192,28 @@ class RGB_Wrapper
          * 
          * for an angle of pi, that would correspond to 30/2 = 15, which
          * is right on top of an LED at index 15.  */
-        float theta_offset;
+        float theta_offset_in_radians;
 
+        RGB_Wrapper_Circle_Type_e circle_type = RGB_Wrapper_Circle__Unset;
+        
+        float theta_with_led_offset_in_radians;
+        
         /** for an angle of "theta+offset = pi" and an LED count of 5,
          * this value would be 5/2pi*pi = 5/2 = 2.5.  The peak
          * point of the "Q" would be halfway between LED[2] and LED[3] */
         float pdm_angle_index; 
+        
+        float light_persistence_coefficient;
+        
+        float phi_upright_hue_or_value;
 
-        float persistence_coeff;
+        float num_of_circle_leds_on_at_once; 
         
         RGB_Wrapper_Pixel_Info_s pixel_data[WS2812B_MAX_NUM_OF_LEDS];
+        
+        inline void update_circle_tracking_info(float phi_in_radians, float theta_in_radians);
+        inline void update_circle_pixels(float phi_in_radians, float theta_in_radians, uint8_t* led_buf_idx);
+
 
 };
 
