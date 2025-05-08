@@ -18,6 +18,7 @@
 #include "gpio.h"
 #include "config.hpp"
 #include "Gimbal/gimbal.hpp"
+#include "RGB_Wrapper/RGB_Wrapper.hpp"
 
 #include "Pendulum/pendulum.hpp"
 
@@ -71,6 +72,7 @@ void on_motor(char* cmd){ command.motor(&motor, cmd); }
 
 
 WS2812B_RGB_LED_Strip led_strip = WS2812B_RGB_LED_Strip(USB_DP__LED_DO);
+RGB_Wrapper rgb_wrapper = RGB_Wrapper(50);
 
 RGB_OLED_64x64 rgb_oled = RGB_OLED_64x64();
 
@@ -122,17 +124,38 @@ void setup()
   //digitalWrite(GPIO1__SSD_nCS, LOW);
   //digitalWrite(GPIO2__SSD_nRST, LOW);
   
+  rgb_wrapper.link_ws2812b_rgb_led_driver_class(&led_strip);
+  
+  RGB_Wrapper_HV_Color_s tmp_led_init_color_blink;
+  tmp_led_init_color_blink.hue = 150.0f;  // static hue
+  tmp_led_init_color_blink.value = 128;  // static value
+  
+  RGB_Wrapper_HV_Color_s tmp_led_init_color_pulse;
+  tmp_led_init_color_pulse.hue = 330.0f;  //static hue
+  tmp_led_init_color_pulse.value = 255;  // max value
+  
+  RGB_Wrapper_HV_Color_s tmp_led_init_color_circle;
+  tmp_led_init_color_circle.hue = 30.0f;
+  tmp_led_init_color_circle.value = 128;
+  
+  
+  /** initialize pixel and led circle configuration: */
+  rgb_wrapper.set_rainbow_pixel_settings(0, 1, 30, 120.0f, 0.05f);
+  rgb_wrapper.set_pulse_pixel_settings(2, 2, 128.0, 0.03f, false, tmp_led_init_color_pulse);
+  rgb_wrapper.set_blink_pixel_settings(3, 3, 0.0f, 0.01f, false, tmp_led_init_color_blink);
+  rgb_wrapper.set_circle_pixel_settings(4, 49, \
+                                        RGB_Wrapper_Circle__Phi_Rainbow_Theta_Solid_Value, \
+                                        30.0f, \
+                                        0.001f, \
+                                        6, \
+                                        tmp_led_init_color_circle);
+  //
+  if(rgb_wrapper.finish_initializing_pixel_types() == RGB_Wrapper_Status_UPDATING_LED_BUF)
+    hw_serial.println("LED types done initializing.");
+  else  
+    hw_serial.println("Failed to initialize LED's types/driver!");
 
 
-
-  led_strip.init_dma_and_timer_peripherals(50);
-
-  led_strip.modify_pixel_buffer_all_leds(15, 8, 5);
-
-  if(led_strip.process_bitfield_array(55) == WS2812B_READY_TO_UPLOAD_BITSTREAM)
-  {
-    (void)led_strip.write_bitfield_array_via_dma();
-  }
   
   rgb_oled.begin(USB_DM__SSD_DS, GPIO2__SSD_nRST, GPIO1__SSD_nCS, SPI_2, 8000000);
   rgb_oled.fillDisplay(25);
@@ -190,8 +213,6 @@ void setup()
   
   ctrl_loop_5kHz_timer.resume();
 
-  
-
   motor.enable();
 }
 
@@ -209,7 +230,7 @@ void loop()
 {
   //digitalWrite(GPIO2__SSD_nRST, HIGH); 
 
-
+  #if 0
   led_strip.modify_pixel_buffer_all_leds(hue, value);
 
   hue += 0.01f;
@@ -222,6 +243,9 @@ void loop()
   {
     (void)led_strip.write_bitfield_array_via_dma();
   }
+  #else
+    rgb_wrapper.update_pixels(pdm.pdm_phi, pdm.pdm_theta);
+  #endif 
 
   command.run();
   motor.monitor();

@@ -24,7 +24,7 @@
 /** Only up to 50 LED's are supported.  This number
  * was chosen arbitrarily as a static/compile time
  * limit to simplify implementation. */
-#define WS2812B_MAX_NUM_OF_LEDS 50
+#define WS2812B_MAX_NUM_OF_LEDS 100 //50
 
 
 #define WS2812B_NUM_OF_BITS_PER_PIXEL  24
@@ -112,7 +112,7 @@ class WS2812B_RGB_LED_Strip
         /** triggers DMA to start transfer of the bitfield array into
          * the GPIO peripheral BSRR register, which then pulses the 
          * gpio pin configured as the LED data out. */
-        WS2812B_Status_e WS2812B_RGB_LED_Strip::write_bitfield_array_via_dma(void);
+        WS2812B_Status_e write_bitfield_array_via_dma(void);
 
         void set_gpio_pin_level(bool pin_level); // used for testing
         

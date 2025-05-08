@@ -52,25 +52,27 @@ typedef enum : uint8_t {
     RGB_Wrapper_Circle__Unset = 0,
     RGB_Wrapper_Circle__Phi_Rainbow, // whole circle is illuminated a different color as a function of phi
     RGB_Wrapper_Circle__Phi_Pulse, // whole circle is illuminated a solid color but different value as f(phi)
-    RGB_Wrapper_Circle__Phi_Theta_Q, // lights dim around theta as a function of 1+|x|^(1/2)
-    RGB_Wrapper_Circle__Phi_Theta_Solid_Value, // lights do not dim around theta, they only track position
+    RGB_Wrapper_Circle__Phi_Rainbow_Theta_Solid_Value, // H,V "Hue" of LED's change as f(phi), static H,V Value for all 
+    RGB_Wrapper_Circle__Phi_Rainbow_Theta_Q, //  H,V "Hue" of LED's change as f(phi), lights dim around theta as a function of 1+|x|^(1/2)
+    RGB_Wrapper_Circle__Phi_Value_Theta_Solid_Value, // H,V "Value" of LED's change as f(phi), static H,V Value for all 
     
-    /** LED's right under the pendulum illuminate as a function of Phi, and colors stay
+    /** LED's right under the pendulum illuminate as 
+     * with hue being a function of Phi, and colors stay
      * illuminated for a slight time after the pendulum moves so that it decays in 
      * brightness. */
     RGB_Wrapper_Circle__Phi_Theta_Persistence_Rainbow,
-    RGB_Wrapper_Circle__Phi_Theta_Persistence_Solid, // same thing as rainbow but with a solid color.
+    RGB_Wrapper_Circle__Phi_Theta_Persistence_Solid, // same thing as rainbow but "hue = static" and "value = f(phi)"
 } RGB_Wrapper_Circle_Type_e;
 
 
-typedef enum {
+typedef enum : uint8_t {
     RGB_Wrapper_Status_RGB_DRIVER_UNLINKED, // init peripherals and data 
     RGB_Wrapper_Status_INIT_PERIPH, // init peripherals and data 
     RGB_Wrapper_Status_INIT_FAIL, 
     RGB_Wrapper_Status_INIT_PIXEL_TYPES, // configure each pixel (rainbow, blink, circle, etc)
     RGB_Wrapper_Status_UPDATING_LED_BUF, 
     RGB_Wrapper_Status_PROCESSING_PIXEL_BITSTREAM,  
-    RGB_Wrapper_Status_SEND_OUT_PIXEL_BITSTREAM, 
+    RGB_Wrapper_Status_SENDING_OUT_PIXEL_BITSTREAM, 
 } RGB_Wrapper_Status_e;
 
 
@@ -112,6 +114,8 @@ typedef struct {
     float blink_pulse_hue_increment_val;
 
     bool is_blink_pulse_incrementing_up;
+
+    float persistence_HV_value;
     
     RGB_Wrapper_HV_Color_s color_buf;
     uint8_t last_adjacent_idx_of_similar_pixel_setting; 
@@ -163,7 +167,7 @@ class RGB_Wrapper
                                                         uint8_t circle_end_idx_, \
                                                         RGB_Wrapper_Circle_Type_e circle_type_, \
                                                         float phi_upright_hue_or_value_, \
-                                                        float light_persistence_coefficient_, \
+                                                        float light_persistence_decay_val_, \
                                                         float num_of_circle_leds_on_at_once_,
                                                         RGB_Wrapper_HV_Color_s init_color_data);
         
@@ -176,46 +180,52 @@ class RGB_Wrapper
 
         RGB_Wrapper_Status_e update_pixels(float pdm_phi, float pdm_theta);
         
+
+
     private:
+
+        RGB_Wrapper_Pixel_Info_s pixel_data[WS2812B_MAX_NUM_OF_LEDS];
         WS2812B_RGB_LED_Strip *led_strip_drv_ptr = NULL;
         uint8_t num_of_leds_to_cmd;
+        
+        RGB_Wrapper_Status_e status = RGB_Wrapper_Status_RGB_DRIVER_UNLINKED;
+        
+
+        /** Circle Pixel data */
+        RGB_Wrapper_Circle_Type_e circle_type = RGB_Wrapper_Circle__Unset;
         uint8_t num_of_circle_pixels;
         uint8_t circle_start_idx;
         uint8_t circle_end_idx;
-        WS2812B_Status_e driver_status;
-        
-        RGB_Wrapper_Status_e status = RGB_Wrapper_Status_RGB_DRIVER_UNLINKED;
-
-        /** for a circle of 6 LED's, the indexing will be as follows:
-         * [0] = directly on top of the first LED in the circle, also 
-         * equaling 0+offset radians of pendulum base angle (theta). 
-         * 
-         * for an angle of pi, that would correspond to 30/2 = 15, which
-         * is right on top of an LED at index 15.  */
-        float theta_offset_in_radians;
-
-        RGB_Wrapper_Circle_Type_e circle_type = RGB_Wrapper_Circle__Unset;
-        
-        float theta_with_led_offset_in_radians;
-        
-        /** for an angle of "theta+offset = pi" and an LED count of 5,
-         * this value would be 5/2pi*pi = 5/2 = 2.5.  The peak
-         * point of the "Q" would be halfway between LED[2] and LED[3] */
-        float pdm_angle_index; 
-        
-        float light_persistence_coefficient;
-        
-        float phi_upright_hue_or_value;
-
         float num_of_circle_leds_on_at_once; 
+        float light_persistence_decay_val;
+        /** math related values: */
+        float half_num_of_circle_leds_on_at_once;
+        float num_of_circle_pixels_plus_1_f32; // analogous to 360 degrees of a circle, but in units of leds
+        uint8_t num_of_circle_pixels_plus_1_u8;// analogous to 360 degrees of a circle, but in units of leds
+
         
-        RGB_Wrapper_Pixel_Info_s pixel_data[WS2812B_MAX_NUM_OF_LEDS];
+        
+        /** Pendulum Tracking Info: */
+        float theta_offset_in_radians;
+        /** if phi_upright_hue_or_value is entered as a negative value,
+         * that means there will be 0 brightness at phi = 0, and full brightness
+         * (or whatever the absolute magnitude of phi_upright_hue_or_value is) at phi = PI. */
+        float phi_upright_hue_or_value; // for either hue or value
+        uint8_t circle_led_on_start_c_idx;
+        uint8_t circle_led_on_end_c_idx;
+        
+
+        float theta_with_led_offset_in_radians;
+        float theta_in_circle_idx;
+        float phi_in_hue_or_value; 
+        
         
         inline void update_circle_tracking_info(float phi_in_radians, float theta_in_radians);
         inline void update_circle_pixels(float phi_in_radians, float theta_in_radians, uint8_t* led_buf_idx);
-
+        inline uint8_t get_hv_value_based_on_distance_from_pdm(uint8_t led_circle_idx, uint8_t max_value);
 
 };
+
 
 #endif // __RGB_WRAPPER_HPP
 
