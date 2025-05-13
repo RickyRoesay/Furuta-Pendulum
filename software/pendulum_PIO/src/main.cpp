@@ -72,7 +72,7 @@ void on_motor(char* cmd){ command.motor(&motor, cmd); }
 
 
 WS2812B_RGB_LED_Strip led_strip = WS2812B_RGB_LED_Strip(USB_DP__LED_DO);
-RGB_Wrapper rgb_wrapper = RGB_Wrapper(50);
+RGB_Wrapper rgb_wrapper = RGB_Wrapper(100);
 
 RGB_OLED_64x64 rgb_oled = RGB_OLED_64x64();
 
@@ -125,6 +125,7 @@ void setup()
   //digitalWrite(GPIO2__SSD_nRST, LOW);
   
   rgb_wrapper.link_ws2812b_rgb_led_driver_class(&led_strip);
+  rgb_wrapper.init_periphs_for_WS2812B();
   
   RGB_Wrapper_HV_Color_s tmp_led_init_color_blink;
   tmp_led_init_color_blink.hue = 150.0f;  // static hue
@@ -136,16 +137,16 @@ void setup()
   
   RGB_Wrapper_HV_Color_s tmp_led_init_color_circle;
   tmp_led_init_color_circle.hue = 30.0f;
-  tmp_led_init_color_circle.value = 128;
+  tmp_led_init_color_circle.value = 128.0f; //30;
   
   
   /** initialize pixel and led circle configuration: */
-  rgb_wrapper.set_rainbow_pixel_settings(0, 1, 30, 120.0f, 0.05f);
-  rgb_wrapper.set_pulse_pixel_settings(2, 2, 128.0, 0.03f, false, tmp_led_init_color_pulse);
-  rgb_wrapper.set_blink_pixel_settings(3, 3, 0.0f, 0.01f, false, tmp_led_init_color_blink);
-  rgb_wrapper.set_circle_pixel_settings(4, 49, \
-                                        RGB_Wrapper_Circle__Phi_Rainbow_Theta_Solid_Value, \
-                                        30.0f, \
+  rgb_wrapper.set_rainbow_pixel_settings(0, 1, 30, 120.0f, 0.1f);
+  rgb_wrapper.set_pulse_pixel_settings(2, 2, 80.0, 0.3f, false, tmp_led_init_color_pulse);
+  rgb_wrapper.set_blink_pixel_settings(3, 3, 0.0f, 0.025f, false, tmp_led_init_color_blink);
+  rgb_wrapper.set_circle_pixel_settings(4, 99, \
+                                        RGB_Wrapper_Circle__Phi_Rainbow_Theta_Q, \
+                                        -0.307f, \
                                         0.001f, \
                                         6, \
                                         tmp_led_init_color_circle);
@@ -156,10 +157,17 @@ void setup()
     hw_serial.println("Failed to initialize LED's types/driver!");
 
 
-  
+  #if 0
   rgb_oled.begin(USB_DM__SSD_DS, GPIO2__SSD_nRST, GPIO1__SSD_nCS, SPI_2, 8000000);
   rgb_oled.fillDisplay(25);
-
+  #else 
+  pinMode(GPIO2__SSD_nRST, OUTPUT);
+  digitalWrite(GPIO2__SSD_nRST, LOW);
+  pinMode(GPIO1__SSD_nCS, OUTPUT);
+  digitalWrite(GPIO1__SSD_nCS, LOW);
+  pinMode(USB_DM__SSD_DS, OUTPUT);
+  digitalWrite(USB_DM__SSD_DS, LOW);
+  #endif 
   /** Prescaler is automatically set when setting overflow with format != tick */
   ctrl_loop_5kHz_timer.setOverflow(200UL, MICROSEC_FORMAT);
   ctrl_loop_5kHz_timer.attachInterrupt(Update_IT_callback);
@@ -244,7 +252,9 @@ void loop()
     (void)led_strip.write_bitfield_array_via_dma();
   }
   #else
-    rgb_wrapper.update_pixels(pdm.pdm_phi, pdm.pdm_theta);
+    digitalWrite(USB_DM__SSD_DS, HIGH);
+    rgb_wrapper.update_pixels(pdm.pdm_theta /** pdm.pdm_phi */, encoder.getMechanicalAngle());
+    digitalWrite(USB_DM__SSD_DS, LOW);
   #endif 
 
   command.run();

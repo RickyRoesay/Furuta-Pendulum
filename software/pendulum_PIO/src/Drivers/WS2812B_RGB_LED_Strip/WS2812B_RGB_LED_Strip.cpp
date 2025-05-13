@@ -177,7 +177,7 @@ inline bool WS2812B_RGB_LED_Strip::is_dma_transfer_in_progress(void)
 bool WS2812B_RGB_LED_Strip::modify_pixel_buffer_single(uint8_t buffer_idx, 
                                                   uint8_t red, uint8_t green, uint8_t blue)
 {
-  if(buffer_idx > active_led_num)
+  if(buffer_idx >= active_led_num)
     return 0;
 
   led_pixel_buf[buffer_idx].red = red;
@@ -196,7 +196,7 @@ bool WS2812B_RGB_LED_Strip::modify_pixel_buffer_single(uint8_t buffer_idx,
 bool WS2812B_RGB_LED_Strip::modify_pixel_buffer_single(uint8_t buffer_idx, 
                                                     float hue_degrees, uint8_t value)
 {
-  if(buffer_idx > active_led_num \
+  if(buffer_idx >= active_led_num \
   || hue_degrees > 360.0f \
   || hue_degrees < 0.0f)
     return 0;

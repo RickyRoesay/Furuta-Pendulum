@@ -64,6 +64,35 @@ typedef enum : uint8_t {
     RGB_Wrapper_Circle__Phi_Theta_Persistence_Solid, // same thing as rainbow but "hue = static" and "value = f(phi)"
 } RGB_Wrapper_Circle_Type_e;
 
+#if 0
+/** List of possible state values to "modulate" the Hue of the LED's
+ * circling/tracking the pendulum's base angle in a circle. */
+typedef enum : uint8_t {
+    RGB_Wrapper_HV_Hue_Mod__Pendulum_Angle, 
+    RGB_Wrapper_HV_Hue_Mod__Base_Ang_Vel, 
+    RGB_Wrapper_HV_Hue_Mod__Num_Of_Types, 
+} RGB_Wrapper_HV_Value_Modulation_Type_e;
+
+
+/** List of possible state values to "modulate" the value */
+typedef enum : uint8_t {
+    RGB_Wrapper_HV_Value_Decay__None, // All of the circle LED's are on and have the same HV Value
+
+    
+    RGB_Wrapper_HV_Value_Decay__Static, // 
+    RGB_Wrapper_HV_Value_Decay__, 
+    RGB_Wrapper_HV_Value_Decay__, 
+    RGB_Wrapper_HV_Value_Decay__, 
+    RGB_Wrapper_HV_Value_Decay__, 
+    
+    /** LED's right under the pendulum illuminate as 
+     * with hue being a function of Phi, and colors stay
+     * illuminated for a slight time after the pendulum moves so that it decays in 
+     * brightness. */
+    RGB_Wrapper_Circle__Phi_Theta_Persistence_Rainbow,
+    RGB_Wrapper_Circle__Phi_Theta_Persistence_Solid, // same thing as rainbow but "hue = static" and "value = f(phi)"
+} RGB_Wrapper_HV_Value_Modulation_Type_e;
+#endif 
 
 typedef enum : uint8_t {
     RGB_Wrapper_Status_RGB_DRIVER_UNLINKED, // init peripherals and data 
@@ -72,7 +101,6 @@ typedef enum : uint8_t {
     RGB_Wrapper_Status_INIT_PIXEL_TYPES, // configure each pixel (rainbow, blink, circle, etc)
     RGB_Wrapper_Status_UPDATING_LED_BUF, 
     RGB_Wrapper_Status_PROCESSING_PIXEL_BITSTREAM,  
-    RGB_Wrapper_Status_SENDING_OUT_PIXEL_BITSTREAM, 
 } RGB_Wrapper_Status_e;
 
 
@@ -193,18 +221,14 @@ class RGB_Wrapper
 
         /** Circle Pixel data */
         RGB_Wrapper_Circle_Type_e circle_type = RGB_Wrapper_Circle__Unset;
-        uint8_t num_of_circle_pixels;
+        uint8_t num_of_circle_pixels_u8;
+        float num_of_circle_pixels_f32; // analogous to 360 degrees of a circle, but in units of leds
         uint8_t circle_start_idx;
         uint8_t circle_end_idx;
         float num_of_circle_leds_on_at_once; 
         float light_persistence_decay_val;
-        /** math related values: */
-        float half_num_of_circle_leds_on_at_once;
-        float num_of_circle_pixels_plus_1_f32; // analogous to 360 degrees of a circle, but in units of leds
-        uint8_t num_of_circle_pixels_plus_1_u8;// analogous to 360 degrees of a circle, but in units of leds
+        float half_num_of_circle_leds_on_at_once; // math related value
 
-        
-        
         /** Pendulum Tracking Info: */
         float theta_offset_in_radians;
         /** if phi_upright_hue_or_value is entered as a negative value,

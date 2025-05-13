@@ -151,7 +151,7 @@ static float q_pulse_scaled_to_1_lut_arr[136] =
 
 float get_scaled_val_for_q_shaped_value_pulse_via_lut(float input_val_scaled_to_1)
 {
-    uint8_t tmp_ret_val;
+    float tmp_ret_val;
 
     uint8_t tmp_scaled_val_u8 = (uint8_t)(100.0f * input_val_scaled_to_1);
 
