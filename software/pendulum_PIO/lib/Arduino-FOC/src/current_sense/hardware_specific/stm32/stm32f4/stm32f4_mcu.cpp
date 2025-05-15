@@ -110,6 +110,13 @@ float _readADCVoltageLowSide(const int pin, const void* cs_params){
   return 0;
 }
 
+float _read_ODESC_bus_voltage(const float conversion, const void* cs_params)
+{
+  return HAL_ADCEx_InjectedGetValue(((Stm32CurrentSenseParams*)cs_params)->adc_handle, ADC_INJECTED_RANK_4) * conversion;
+}
+
+
+
 extern "C" {
   void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *AdcHandle){
     // calculate the instance

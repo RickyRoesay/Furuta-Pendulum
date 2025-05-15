@@ -47,6 +47,8 @@ void* _configureADCLowSide(const void *driver_params, const int pinA,const int p
 
 void _startADC3PinConversionLowSide();
 
+
+
 /**
  *  function reading an ADC value and returning the read voltage
  *
@@ -54,6 +56,19 @@ void _startADC3PinConversionLowSide();
  * @param cs_params -current sense parameter structure - hardware specific
  */
 float _readADCVoltageLowSide(const int pinA, const void* cs_params);
+
+
+
+/** hacking this into the f4 specific implementation of 
+ * these functions so we can throw the voltage measurement 
+ * into the 3rd injected ADC channel of the ADC module 
+ * assigned to the current sensors.  
+ * 
+ * The ODESC only has 2 current sensors so we only 
+ * need to use 3 of the injected channels */
+float _read_ODESC_bus_voltage(const float conversion, const void* cs_params);
+
+
 
 /**
  *  function syncing the Driver with the ADC  for the LowSide Sensing
