@@ -10,21 +10,13 @@ A libary to use the SSD1357 driver in conjuction with a particular OLED display 
 // #include "screen65k.h"				// This is a method of storing arbitrary RGB images in 16-bit depth where two colors are 5 bits and the last is 6 bits
 #include "SparkFun_SSD1357_OLED.h"	// This is a driver that takes screens and displays them on a physical device
 
-#define OLED_64x64_WIDTH 	64
-#define OLED_64x64_HEIGHT 	64
-#define OLED_64x64_START_ROW	0x00
-#define OLED_64x64_START_COL	0x20
-#define OLED_64x64_STOP_ROW 	0x3F
-#define OLED_64x64_STOP_COL		0x5F
-#define OLED_64x64_MAX_BYTES_PER_PIXEL	2
-#define OLED_WORING_BUFF_NUM_PIXELS OLED_64x64_WIDTH
+
 
 #define OLED_SCROLL_NORMAL 0x01
 #define OLED_SCROLL_SLOW 0x02
 #define OLED_SCROLL_SLOWEST 0x03
 
 class RGB_OLED_64x64 : public SSD1357 {
-// class RGB_OLED_64x64 : public SSD1357 {
 private:
 protected:
 
@@ -62,7 +54,7 @@ public:
     uint16_t getDisplayHeight(void);
     void setDisplayWidth(uint16_t width);
     void setDisplayHeight(uint16_t height);
-    void setColor(uint16_t value);
+    void setFillColor(uint16_t value);
     // void setDrawMode(uint8_t mode);
     // uint8_t *getScreenBuffer(void);
 
@@ -81,34 +73,12 @@ public:
     void scrollLeft(uint8_t start, uint8_t stop, uint8_t speed);
 
     //TODO Add 0x29/0x2A vertical scrolling commands
-    void scrollUp(uint8_t start, uint8_t stop);
+    //void scrollUp(uint8_t start, uint8_t stop);
     //void scrollVertLeft(uint8_t start, uint8_t stop);
 
     void scrollStop(void);
 
 
-    // Drawing functions - based on 64x64 RGB OLED coordinates for ease
-    void setPixel(uint8_t x, uint8_t y);
-    void setPixel(uint8_t x, uint8_t y, uint16_t value);
-
-    void line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1);
-    void line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint16_t value);
-    void lineWide(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t width);
-    void lineWide(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint16_t value, uint8_t width);
-    void lineH(uint8_t x, uint8_t y, uint8_t width);
-    void lineH(uint8_t x, uint8_t y, uint8_t width, uint16_t value);
-    void lineV(uint8_t x, uint8_t y, uint8_t height);
-    void lineV(uint8_t x, uint8_t y, uint8_t height, uint16_t value);
-
-    void rect(uint8_t x, uint8_t y, uint8_t width, uint8_t height);
-    void rect(uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint16_t value);
-    void rectFill(uint8_t x, uint8_t y, uint8_t width, uint8_t height);
-    void rectFill(uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint16_t value);
-
-    void circle(uint8_t x, uint8_t y, uint8_t radius);
-    void circle(uint8_t x, uint8_t y, uint8_t radius, uint16_t value);
-    void circleFill(uint8_t x, uint8_t y, uint8_t radius);
-    void circleFill(uint8_t x, uint8_t y, uint8_t radius, uint16_t value);
 
 
 };

@@ -38,10 +38,11 @@ void RGB_OLED_64x64::begin(uint8_t dcPin, uint8_t rstPin, uint8_t csPin, SPIClas
 	_spi->endTransaction();
 
 	// Perform the startup procedure
-	startup();
+	toggleResetPin();
 	defaultConfigure();
 
-	// Specific to the 64x64 display:
+	/** Specific to the 64x64 display, these must be set after
+	 * calling "defaultConfigure()" */
 	_width = OLED_64x64_WIDTH;
 	_height = OLED_64x64_HEIGHT;
 
@@ -59,8 +60,14 @@ void RGB_OLED_64x64::defaultConfigure( void )
 
   	// Initial settings configuration
   	setClockDivider(0xB0);
-  	setMUXRatio(0x3F);
-  	setDisplayOffset(0x40);
+
+	#ifdef WIDTH_IS_PROPORTIONAL_TO_COLUMNS
+  	setMUXRatio(OLED_64x64_WIDTH - 1); // mux ratio sets the number of columns to be activated.
+	#else
+  	setMUXRatio(OLED_64x64_HEIGHT - 1); // mux ratio sets the number of columns to be activated.
+	#endif 
+	
+  	setDisplayOffset(0x00); // was 0x40
   	setDisplayStartLine(0x00);
   	setRemapColorDepth(false, true, true, true, true, SSD1357_COLOR_MODE_65k);
   	_colorMode = SSD1357_COLOR_MODE_65k;
@@ -92,8 +99,8 @@ void RGB_OLED_64x64::defaultConfigure( void )
   	setRowAddress(OLED_64x64_START_ROW, OLED_64x64_STOP_ROW);
   	setDisplayMode(SSD1357_CMD_SDM_RESET);
 
-  	setWidth(64);
-  	setHeight(64);
+  	setWidth(OLED_64x64_WIDTH);
+  	setHeight(OLED_64x64_HEIGHT);
 
   	setSleepMode(false);
 
@@ -161,12 +168,12 @@ void RGB_OLED_64x64::setCursor(uint8_t x, uint8_t y)
 
 uint16_t RGB_OLED_64x64::getDisplayWidth(void)
 {
-	return OLED_64x64_WIDTH;
+	return _width;
 }
 
 uint16_t RGB_OLED_64x64::getDisplayHeight(void)
 {
-	return OLED_64x64_HEIGHT;
+	return _height;
 }
 
 void RGB_OLED_64x64::setDisplayWidth(uint16_t width)
@@ -179,7 +186,7 @@ void RGB_OLED_64x64::setDisplayHeight(uint16_t height)
 	setMUXRatio(height);
 }
 
-void RGB_OLED_64x64::setColor(uint16_t value)
+void RGB_OLED_64x64::setFillColor(uint16_t value)
 {
 	_fillColor = value;
 }
@@ -210,79 +217,4 @@ void RGB_OLED_64x64::scrollStop(void)
 
 
 
-// Drawing functions that have the x, y coordinates in terms of the 64x64 RGB OLED
-void RGB_OLED_64x64::setPixel(uint8_t x, uint8_t y)
-{
-	setPixelRAM(OLED_64x64_START_COL + x, OLED_64x64_START_ROW + y);
-}
-void RGB_OLED_64x64::setPixel(uint8_t x, uint8_t y, uint16_t value)
-{
-	setPixelRAM(OLED_64x64_START_COL + x, OLED_64x64_START_ROW + y, value);
-}
 
-void RGB_OLED_64x64::line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1)
-{
-	lineRAM(OLED_64x64_START_COL + x0, OLED_64x64_START_ROW + y0, OLED_64x64_START_COL + x1, OLED_64x64_START_ROW + y1);
-}
-void RGB_OLED_64x64::line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint16_t value)
-{
-	lineRAM(OLED_64x64_START_COL + x0, OLED_64x64_START_ROW + y0, OLED_64x64_START_COL + x1, OLED_64x64_START_ROW + y1, value);
-}
-void RGB_OLED_64x64::lineWide(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t width)
-{
-	lineWideRAM(OLED_64x64_START_COL + x0, OLED_64x64_START_ROW + y0, OLED_64x64_START_COL + x1, OLED_64x64_START_ROW + y1, width);
-}
-void RGB_OLED_64x64::lineWide(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint16_t value, uint8_t width)
-{
-	lineWideRAM(OLED_64x64_START_COL + x0, OLED_64x64_START_ROW + y0, OLED_64x64_START_COL + x1, OLED_64x64_START_ROW + y1, value, width);
-}
-	void RGB_OLED_64x64::lineH(uint8_t x, uint8_t y, uint8_t width)
-{
-	lineHRAM(OLED_64x64_START_COL + x, OLED_64x64_START_ROW + y, width);
-}
-void RGB_OLED_64x64::lineH(uint8_t x, uint8_t y, uint8_t width, uint16_t value)
-{
-	lineHRAM(OLED_64x64_START_COL + x, OLED_64x64_START_ROW + y, width, value);
-}	
-void RGB_OLED_64x64::lineV(uint8_t x, uint8_t y, uint8_t height)
-{
-	lineVRAM(OLED_64x64_START_COL + x, OLED_64x64_START_ROW + y, height);
-}
-void RGB_OLED_64x64::lineV(uint8_t x, uint8_t y, uint8_t height, uint16_t value)
-{	
-	lineVRAM(OLED_64x64_START_COL + x, OLED_64x64_START_ROW + y, height, value);
-}
-
-void RGB_OLED_64x64::rect(uint8_t x, uint8_t y, uint8_t width, uint8_t height)
-{
-	rectRAM(OLED_64x64_START_COL + x, OLED_64x64_START_ROW + y, width, height);
-}
-void RGB_OLED_64x64::rect(uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint16_t value)
-{
-	rectRAM(OLED_64x64_START_COL + x, OLED_64x64_START_ROW + y, width, height, value);
-}
-void RGB_OLED_64x64::rectFill(uint8_t x, uint8_t y, uint8_t width, uint8_t height)
-{	
-	rectFillRAM(OLED_64x64_START_COL + x, OLED_64x64_START_ROW + y, width, height);
-}
-void RGB_OLED_64x64::rectFill(uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint16_t value)
-{
-	rectFillRAM(OLED_64x64_START_COL + x, OLED_64x64_START_ROW + y, width, height, value);
-}
-
-void RGB_OLED_64x64::circle(uint8_t x, uint8_t y, uint8_t radius)
-{
-	circleRAM(OLED_64x64_START_COL + x, OLED_64x64_START_ROW + y, radius);
-}
-void RGB_OLED_64x64::circle(uint8_t x, uint8_t y, uint8_t radius, uint16_t value)
-{
-	circleRAM(OLED_64x64_START_COL + x, OLED_64x64_START_ROW + y, radius, value);
-}
-void RGB_OLED_64x64::circleFill(uint8_t x, uint8_t y, uint8_t radius)
-{
-	circleFillRAM(OLED_64x64_START_COL + x, OLED_64x64_START_ROW + y, radius);
-}
-void RGB_OLED_64x64::circleFill(uint8_t x, uint8_t y, uint8_t radius, uint16_t value)
-{
-	circleFillRAM(OLED_64x64_START_COL + x, OLED_64x64_START_ROW + y, radius, value);
-}

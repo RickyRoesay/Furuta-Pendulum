@@ -112,7 +112,8 @@ uint8_t * MicroviewMonochromeProgMemBMPFont::getFrameData(uint8_t val, uint16_t 
 bool MicroviewMonochromeProgMemBMPFont::advanceState(uint8_t val, uint16_t screen_width, uint16_t screen_height)
 {
 	// Okay! Here is where we can change the location of text :)
-	// this is the callback function that happens after the driver has already received the data pointers but hasn't actually output the data to GDDRAM yet, therefor it's not advisable to change the chardata, framedata, or alpha data
+	// this is the callback function that happens after the driver has already received the data pointers but hasn't actually output the data to GDDRAM yet, 
+	// therefor it's not advisable to change the chardata, framedata, or alpha data
 	// It IS advisable, however, to change the cursor location and provide a yea or nea to the driver for actually printing a character.
 
 	// First things first move the cursor. 
@@ -293,10 +294,10 @@ void SSD1357::begin(uint8_t dcPin, uint8_t rstPin, uint8_t csPin, SPIClass &spiI
 	condition can also happen right after the SPI
 	hardware is started for the first time with SPI.begin.
 
-	I noticed that I had to call 'startup()' twice to get 
+	I noticed that I had to call 'toggleResetPin()' twice to get 
 	the display working. After being stumped and trying 
 	more delays and some code rearranging it struck me that 
-	startup() was the first time I ever sent data on the 
+	toggleResetPin() was the first time I ever sent data on the 
 	SPI peripheral.
 	
 	Without being bothered to 100% confirm the cause I
@@ -315,7 +316,7 @@ void SSD1357::begin(uint8_t dcPin, uint8_t rstPin, uint8_t csPin, SPIClass &spiI
 	_spi->transfer(temp_buff, 1);
 	_spi->endTransaction();
 
-	startup();	// It really bothers me that I have to call startup twice... I've trid adding more of a delay - oh! Maybe there is a SPI problem. Bingo. See note above
+	toggleResetPin();	// It really bothers me that I have to call toggleResetPin twice... I've trid adding more of a delay - oh! Maybe there is a SPI problem. Bingo. See note above
 }
 
 void SSD1357::setCSlow( void )
@@ -328,7 +329,7 @@ void SSD1357::setCShigh(void)
 	digitalWrite(_cs, HIGH);
 }
 
-void SSD1357::startup( void )
+void SSD1357::toggleResetPin( void )
 {
 	// Assume that VDD and VCC are stable when this function is called
 

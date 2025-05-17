@@ -17,6 +17,7 @@ Owen Lyke
 #include <Arduino.h>
 #include <SPI.h>
 #include "fast_hsv2rgb.h"
+#include "RGB_OLED_Screen_Settings.h"
 
 #define HSV_USE_ASSEMBLY
 
@@ -192,7 +193,7 @@ public:
 	SSD1357( void );		// Constructor
 
 	virtual void begin(uint8_t dcPin, uint8_t rstPin, uint8_t csPin, SPIClass &spiInterface = SPI, uint32_t spiFreq = SSD1357_SPI_MAX_FREQ);
-	void startup( void );
+	void toggleResetPin( void );
 
 	void setCSlow( void );
 	void setCShigh(void);

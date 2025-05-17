@@ -317,7 +317,7 @@ RGB_Wrapper_Status_e RGB_Wrapper::update_pixels(float pdm_phi, float pdm_theta)
 
         case RGB_Wrapper_Status_UPDATING_LED_BUF:
         
-            digitalWrite(GPIO1__SSD_nCS, HIGH);
+            //digitalWrite(GPIO1__SSD_nCS, HIGH);
             while(tmp_pixel_idx < num_of_leds_to_cmd)
             {
                 switch(pixel_data[tmp_pixel_idx].pixel_type)
@@ -457,7 +457,7 @@ RGB_Wrapper_Status_e RGB_Wrapper::update_pixels(float pdm_phi, float pdm_theta)
                 }
             }
             status = RGB_Wrapper_Status_PROCESSING_PIXEL_BITSTREAM;
-            digitalWrite(GPIO1__SSD_nCS, LOW);
+            //digitalWrite(GPIO1__SSD_nCS, LOW);
         break;
 
 
@@ -809,7 +809,7 @@ inline uint8_t RGB_Wrapper::get_hv_value_based_on_distance_from_pdm(uint8_t led_
     /** Must account for when the LED index has wrapped around the circle before the
      * angle of the pendulum base has.  Analogous to 2 vectors having a phase shift of 3 vs. 357 degrees; We 
      * want the lower number. */
-    if(tmp_linear_distance_between_pdm_base_and_led_idx > 15.0) 
+    if(tmp_linear_distance_between_pdm_base_and_led_idx > (half_num_of_circle_leds_on_at_once + 1.0f)) 
         tmp_cyclical_distance_between_pdm_base_and_led_in_idx = num_of_circle_pixels_f32 - tmp_linear_distance_between_pdm_base_and_led_idx;
     else
         tmp_cyclical_distance_between_pdm_base_and_led_in_idx = tmp_linear_distance_between_pdm_base_and_led_idx;

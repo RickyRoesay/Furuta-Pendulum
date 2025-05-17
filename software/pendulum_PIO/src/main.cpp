@@ -157,9 +157,20 @@ void setup()
     hw_serial.println("Failed to initialize LED's types/driver!");
 
 
-  #if 0
+  #if 1
+
+  
   rgb_oled.begin(USB_DM__SSD_DS, GPIO2__SSD_nRST, GPIO1__SSD_nCS, SPI_2, 8000000);
-  rgb_oled.fillDisplay(25);
+  rgb_oled.fillDisplay(25); 
+  
+  
+  
+  
+  //rgb_oled.write(50);
+  //rgb_oled.write(51);
+  //rgb_oled.write(52);
+  //rgb_oled.write(53);
+
   #else 
   pinMode(GPIO2__SSD_nRST, OUTPUT);
   digitalWrite(GPIO2__SSD_nRST, LOW);
@@ -211,6 +222,8 @@ void setup()
 
   gimbal_init(hw_serial);
 
+  rgb_oled.write(54);
+
   pdm_torque_setpoint_biquad_c.set_steady_state_val(0.0f);
 
   command.add('M', on_motor,"my motor motion");
@@ -236,8 +249,6 @@ uint8_t value = 30;
 
 void loop() 
 {
-  //digitalWrite(GPIO2__SSD_nRST, HIGH); 
-
   #if 0
   led_strip.modify_pixel_buffer_all_leds(hue, value);
 
@@ -252,10 +263,20 @@ void loop()
     (void)led_strip.write_bitfield_array_via_dma();
   }
   #else
-    digitalWrite(USB_DM__SSD_DS, HIGH);
+    //digitalWrite(USB_DM__SSD_DS, HIGH);
     rgb_wrapper.update_pixels(pdm.pdm_theta /** pdm.pdm_phi */, encoder.getMechanicalAngle());
-    digitalWrite(USB_DM__SSD_DS, LOW);
+    //digitalWrite(USB_DM__SSD_DS, LOW);
   #endif 
+
+  
+  //rgb_oled.write(value);
+  if(value > 255)
+  {
+    value = 55;
+    rgb_oled.write(value);
+  }
+  else
+    value++;
 
   command.run();
   motor.monitor();
@@ -296,8 +317,6 @@ void loop()
   }
 
   pdm_run_phi_offset_correction_checks();
-  
-  //digitalWrite(GPIO2__SSD_nRST, LOW);
 }
 
 
