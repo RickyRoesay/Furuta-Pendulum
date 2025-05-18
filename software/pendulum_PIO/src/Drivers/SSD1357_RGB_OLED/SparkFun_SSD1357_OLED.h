@@ -194,6 +194,7 @@ public:
 
 	virtual void begin(uint8_t dcPin, uint8_t rstPin, uint8_t csPin, SPIClass &spiInterface = SPI, uint32_t spiFreq = SSD1357_SPI_MAX_FREQ);
 	void toggleResetPin( void );
+	void reconfigureSpiSettings(void);
 
 	void setCSlow( void );
 	void setCShigh(void);

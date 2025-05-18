@@ -6,8 +6,8 @@
 
 RGB_OLED_64x64::RGB_OLED_64x64()
 {
-
 }
+
 
 void RGB_OLED_64x64::begin(uint8_t dcPin, uint8_t rstPin, uint8_t csPin, SPIClass &spiInterface, uint32_t spiFreq)
 {
@@ -43,8 +43,8 @@ void RGB_OLED_64x64::begin(uint8_t dcPin, uint8_t rstPin, uint8_t csPin, SPIClas
 
 	/** Specific to the 64x64 display, these must be set after
 	 * calling "defaultConfigure()" */
-	_width = OLED_64x64_WIDTH;
-	_height = OLED_64x64_HEIGHT;
+	_width = OLED_WIDTH;
+	_height = OLED_HEIGHT;
 
 	_fillColor = 0xFFFF;
 	
@@ -61,16 +61,18 @@ void RGB_OLED_64x64::defaultConfigure( void )
   	// Initial settings configuration
   	setClockDivider(0xB0);
 
-	#ifdef WIDTH_IS_PROPORTIONAL_TO_COLUMNS
-  	setMUXRatio(OLED_64x64_WIDTH - 1); // mux ratio sets the number of columns to be activated.
-	#else
-  	setMUXRatio(OLED_64x64_HEIGHT - 1); // mux ratio sets the number of columns to be activated.
-	#endif 
+  	setMUXRatio(OLED_MUX_NUM); 
 	
-  	setDisplayOffset(0x00); // was 0x40
+  	setDisplayOffset(0x00);
   	setDisplayStartLine(0x00);
-  	setRemapColorDepth(false, true, true, true, true, SSD1357_COLOR_MODE_65k);
+  	setRemapColorDepth(OLED_ADDRESS_INCREMENT_ORDER,  
+						OLED_COLUMN_ADDR_INVERTED, // OLED_COLUMN_ADDR_NONINVERTED    OLED_COLUMN_ADDR_INVERTED
+						true, // color swap 
+						OLED_COM_SCAN_INV_SETTING, 
+						true, // split odd even
+						SSD1357_COLOR_MODE_65k);
   	_colorMode = SSD1357_COLOR_MODE_65k;
+
   	setContrastCurrentABC(0x88, 0x32, 0x88);
   	setMasterContrastCurrent(0x0F);
   	setResetPrechargePeriod(0x02, 0x03);
@@ -95,18 +97,18 @@ void RGB_OLED_64x64::defaultConfigure( void )
 
   	setPrechargeVoltage(0x17);
   	setVCOMH(0x05);
-  	setColumnAddress(OLED_64x64_START_COL, OLED_64x64_STOP_COL);
-  	setRowAddress(OLED_64x64_START_ROW, OLED_64x64_STOP_ROW);
+  	setColumnAddress(OLED_START_COL_IDX, OLED_STOP_COL_IDX);
+  	setRowAddress(OLED_START_ROW_IDX, OLED_STOP_ROW_IDX);
   	setDisplayMode(SSD1357_CMD_SDM_RESET);
 
-  	setWidth(OLED_64x64_WIDTH);
-  	setHeight(OLED_64x64_HEIGHT);
+  	setWidth(OLED_WIDTH);
+  	setHeight(OLED_HEIGHT);
 
   	setSleepMode(false);
 
   	delay(200);
 
-  	setFontCursorValues(OLED_64x64_START_COL, OLED_64x64_START_ROW, OLED_64x64_START_COL, OLED_64x64_START_ROW, OLED_64x64_STOP_COL, OLED_64x64_STOP_ROW);
+  	setFontCursorValues(OLED_START_X_IDX, OLED_START_Y_IDX, OLED_START_X_IDX, OLED_START_Y_IDX, OLED_STOP_X_IDX, OLED_STOP_Y_IDX);
 }
 
 void RGB_OLED_64x64::clearDisplay(uint8_t mode)
@@ -116,18 +118,14 @@ void RGB_OLED_64x64::clearDisplay(uint8_t mode)
 
 void RGB_OLED_64x64::fillDisplay(uint16_t value)
 {
-	fast_filled_rectangle(OLED_64x64_START_COL, OLED_64x64_START_ROW, OLED_64x64_STOP_COL, OLED_64x64_STOP_ROW, value);
+	/** once "fast_filled_rectangle" has the WIDTH_IS_PROPORTIONAL_TO_COLUMNS incorporated 
+	 * into it's "writeRam" function call (like is the case with the "write" function), 
+	 * we will be able to pass x and y coordinates relative to the screens indended orientation.  
+	 * 
+	 * Until then, simply pass the hard coded column and row indexes into this function... */
+	fast_filled_rectangle(OLED_START_COL_IDX, OLED_START_ROW_IDX, OLED_STOP_COL_IDX, OLED_STOP_ROW_IDX, value);
 }
 
-void RGB_OLED_64x64::display(void)						// Because there is no local data (always writing to display ram) there is no need for this function, but it is kept for compatibility
-{
-	return;
-}
-
-// void setCursor(uint8_t x, uint8_t y)
-// {
-
-// }
 
 
 
@@ -162,7 +160,7 @@ void RGB_OLED_64x64::flipHorizontal(bool flip)
 
 void RGB_OLED_64x64::setCursor(uint8_t x, uint8_t y)
 {
-	setCursorRAM(OLED_64x64_START_COL + x, OLED_64x64_START_ROW + y);
+	setCursorRAM(OLED_START_COL_IDX + x, OLED_START_ROW_IDX + y);
 }
 
 

@@ -162,14 +162,47 @@ void setup()
   
   rgb_oled.begin(USB_DM__SSD_DS, GPIO2__SSD_nRST, GPIO1__SSD_nCS, SPI_2, 8000000);
   rgb_oled.fillDisplay(25); 
+  rgb_oled.fillDisplay(19); 
+  rgb_oled.fillDisplay(29); 
+  #if 1
+  rgb_oled.write(50);
+  rgb_oled.write(50);
+  rgb_oled.write(50);
+  rgb_oled.write(51);
+  rgb_oled.write(52);
+  rgb_oled.write(53);
+  rgb_oled.write(54);
+  rgb_oled.write(55);
+  rgb_oled.write(56);
+  rgb_oled.write(57);
+  rgb_oled.write(50);
+  rgb_oled.write(51);
+  rgb_oled.write(52);
+  rgb_oled.write(53);
+  rgb_oled.write(54);
+  rgb_oled.write(55);
+  rgb_oled.write(56);
+  rgb_oled.write(57);
+  rgb_oled.write(50);
+  rgb_oled.write(51);
+  rgb_oled.write(52);
+  rgb_oled.write(53);
+  rgb_oled.write(54);
+  rgb_oled.write(55);
+  rgb_oled.write(56);
+  rgb_oled.write(57);
+  rgb_oled.write(50);
+  rgb_oled.write(51);
+  rgb_oled.write(52);
+  rgb_oled.write(53);
+  rgb_oled.write(54);
+  rgb_oled.write(55);
+  rgb_oled.write(56);
+  rgb_oled.write(57);
+  #endif 
   
   
   
-  
-  //rgb_oled.write(50);
-  //rgb_oled.write(51);
-  //rgb_oled.write(52);
-  //rgb_oled.write(53);
 
   #else 
   pinMode(GPIO2__SSD_nRST, OUTPUT);
@@ -222,7 +255,17 @@ void setup()
 
   gimbal_init(hw_serial);
 
+  rgb_oled.reconfigureSpiSettings();
+  rgb_oled.write(106);
+  rgb_oled.write(52);
+  rgb_oled.write(53);
   rgb_oled.write(54);
+  rgb_oled.write(55);
+  rgb_oled.write(56);
+  rgb_oled.write(57);
+  rgb_oled.write(50);
+  rgb_oled.write(51);
+  rgb_oled.write(52);
 
   pdm_torque_setpoint_biquad_c.set_steady_state_val(0.0f);
 
@@ -273,7 +316,7 @@ void loop()
   if(value > 255)
   {
     value = 55;
-    rgb_oled.write(value);
+    //rgb_oled.write(value);
   }
   else
     value++;

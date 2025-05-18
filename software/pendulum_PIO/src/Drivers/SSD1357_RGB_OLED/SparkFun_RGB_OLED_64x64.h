@@ -35,7 +35,6 @@ public:
 	// LCD Draw functions
     void clearDisplay(uint8_t mode = 0x00);
     void fillDisplay(uint16_t value);
-    void display(void);
     // void setCursor(uint8_t x, uint8_t y);
 
     void invert(bool inv);

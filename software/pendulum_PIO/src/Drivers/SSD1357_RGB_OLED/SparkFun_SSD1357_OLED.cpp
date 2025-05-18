@@ -345,6 +345,46 @@ void SSD1357::toggleResetPin( void )
 	// Now you can do initialization
 }
 
+
+
+/* 
+Okay, lesson time.
+SPI is pretty darn cool and hard to mess up, write?
+Mostly yes, but there is at least one gotcha that has
+bitten me a few times. When using a single SPI bus to
+talk to different devices that use different SPI
+modes (MODE0, MODE1, MODE2, and MODE3) the bus settings
+have to change. I've noticed that the first byte that 
+is sent after a mode change can be mis-interpreted. I
+have a hunch (but have not confirmed) that this is
+due to a mis-match of the clock polarity at idle. This 
+condition can also happen right after the SPI
+hardware is started for the first time with SPI.begin.
+
+I noticed that I had to call 'toggleResetPin()' twice to get 
+the display working. After being stumped and trying 
+more delays and some code rearranging it struck me that 
+toggleResetPin() was the first time I ever sent data on the 
+SPI peripheral.
+
+Without being bothered to 100% confirm the cause I
+tried a solution: send a random byte to no particular
+device (don't activate any chip selects) to 'set' the
+SPI peripheral into the right mode of operation. This
+technique, applied here, did the trick. This whole
+problem is probably worth an in-depth investigation
+in the future.
+
+*/
+void SSD1357::reconfigureSpiSettings( void )
+{
+	// try starting SPI with a simple byte transmisssion to 'set' the SPI peripherals
+	uint8_t temp_buff[1];
+	_spi->beginTransaction(SPISettings(_spiFreq, SSD1357_SPI_DATA_ORDER, SSD1357_SPI_MODE));
+	_spi->transfer(temp_buff, 1);
+	_spi->endTransaction();
+}
+
 void SSD1357::write_ram(uint8_t * pdata, uint8_t startrow, uint8_t startcol, uint8_t stoprow, uint8_t stopcol, uint16_t size)
 {
 	// Use commands to set the starting/ending locations in GDDRAM 
@@ -398,6 +438,8 @@ size_t SSD1357::write(uint8_t val)
 	uint8_t * framedata = getFontFrameData(val); // The length of data returned by userBMPFunc must correspond to the returned character width and height * 2
 	// btw framedata[] = {starty, startx, yheight, xwidth} - user's responsibility that starty + yheight is less than the actual size of the display... same for x direction
 	
+	/** advances the font class's unique x and y cursors specifically for writing text.  
+	 * To get the new x and y cursor data, getFontFrameData() must be called. */
 	bool print_char = fontCallback(val);		// Use the fontCallback function in a custom font to determine what to do after a character is written
 	
 	// // Write the font data to the ram now
@@ -418,7 +460,11 @@ size_t SSD1357::write(uint8_t val)
 		// blendAlphaData(chardata, alphadata);
 
 		// The only limitation on these fonts is that each character must fit in a rectangular frame.
+		#ifdef WIDTH_IS_PROPORTIONAL_TO_COLUMNS
 		write_ram(chardata, starty, startx, (starty + yheight - 1), (startx + xwidth - 1), yheight * xwidth * 2);	// xwidth * yheight as returned by the frame data function MUST be the same as the number of pixels, which is the same as half the number of bytes in the chardata array.
+		#else
+		write_ram(chardata, startx, starty, (startx + xwidth - 1), (starty + yheight - 1), yheight * xwidth * 2);	// xwidth * yheight as returned by the frame data function MUST be the same as the number of pixels, which is the same as half the number of bytes in the chardata array.
+		#endif 
 	}
 	// Otherwise don't print anything
 	return 1;
@@ -1278,23 +1324,46 @@ void SSD1357::fast_filled_rectangle(int8_t x0, int8_t y0, int8_t x1, int8_t y1, 
 		y1 = temp;
 	}
 
-	uint8_t width = x1-x0+1;
-	uint8_t height = y1-y0+1;
 
-	uint8_t rows_per_block = SSD1357_WORKING_BUFF_NUM_PIXELS / width;
-	uint8_t num_full_blocks = height/rows_per_block;
-	uint8_t remaining_rows = height - (num_full_blocks * rows_per_block);
+	/** because we use vertical address increment when we are NOT in "WIDTH_IS_PROPORTIONAL_TO_COLUMNS"
+	 * screen mode, we must handle the offsets between each buffer upload differently. */
+	#if 0
+		uint8_t width = x1-x0+1;
+		uint8_t height = y1-y0+1;
 
-	uint8_t offsety = 0;
+		uint8_t rows_per_block = SSD1357_WORKING_BUFF_NUM_PIXELS / width;
+		uint8_t num_full_blocks = height/rows_per_block;
+		uint8_t remaining_rows = height - (num_full_blocks * rows_per_block);
 
-	for(uint8_t indi = 0; indi < num_full_blocks; indi++)
-	{
-		fill_working_buffer(value, rows_per_block*width);
-		write_ram(working_buff, y0+offsety, x0, y1, x1, 2*rows_per_block*width);
-		offsety += rows_per_block;
-	}
-	fill_working_buffer(value, remaining_rows*width);
-	write_ram(working_buff, y0+offsety, x0, y1, x1, 2*remaining_rows*width);
+		uint8_t offsety = 0;
+
+		for(uint8_t indi = 0; indi < num_full_blocks; indi++)
+		{
+			fill_working_buffer(value, rows_per_block*width);
+			write_ram(working_buff, y0+offsety, x0, y1, x1, 2*rows_per_block*width);
+			offsety += rows_per_block;
+		}
+		fill_working_buffer(value, remaining_rows*width);
+		write_ram(working_buff, y0+offsety, x0, y1, x1, 2*remaining_rows*width);
+	#else
+		uint8_t height = x1-x0+1;
+		uint8_t width = y1-y0+1;
+
+		uint8_t rows_per_block = SSD1357_WORKING_BUFF_NUM_PIXELS / width;
+		uint8_t num_full_blocks = height/rows_per_block;
+		uint8_t remaining_rows = height - (num_full_blocks * rows_per_block);
+
+		uint8_t offsety = 0;
+			
+		for(uint8_t indi = 0; indi < num_full_blocks; indi++)
+		{
+			fill_working_buffer(value, rows_per_block*width);
+			write_ram(working_buff, y0, x0+offsety, y1, x1, 2*rows_per_block*width);
+			offsety += rows_per_block;
+		}
+		fill_working_buffer(value, remaining_rows*width);
+		write_ram(working_buff, y0, x0+offsety, y1, x1, 2*remaining_rows*width);
+	#endif 
 }
 
 void SSD1357::circleRAM(uint8_t x, uint8_t y, uint8_t radius)
