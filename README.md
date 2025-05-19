@@ -9,3 +9,5 @@ Rotary Inverse Pendulum that acts like a cool desktop toy.  Inspired by [Ben Kat
   * Project timeline should be less than a year.  Must use/adapt pre-existing software and hardware when possible. 
 
 
+**Proof of concept:**
+![alt text](https://github.com/RickyRoesay/Furuta-Pendulum/blob/mechanical_updates/demo/Normal-Speed.gif)
