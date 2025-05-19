@@ -88,6 +88,20 @@ RGB_Wrapper_Status_e RGB_Wrapper::init_periphs_for_WS2812B(void)
 
 
 
+
+
+        
+RGB_Wrapper_Status_e RGB_Wrapper::set_theta_offset_in_radians(float pdm_theta_offset_rad,
+                                                        RGB_Wrapper_Theta_Tracking_Direction tracking_direction)
+{
+    theta_offset_in_radians = pdm_theta_offset_rad;
+    theta_tracking_direction = tracking_direction;
+}
+
+
+
+
+
 RGB_Wrapper_Status_e RGB_Wrapper::finish_initializing_pixel_types(void)
 {
     uint8_t tmp_pixel_idx_range_itr = 0;
@@ -317,7 +331,7 @@ RGB_Wrapper_Status_e RGB_Wrapper::update_pixels(float pdm_phi, float pdm_theta)
 
         case RGB_Wrapper_Status_UPDATING_LED_BUF:
         
-            digitalWrite(GPIO1__SSD_nCS, HIGH);
+            //digitalWrite(GPIO1__SSD_nCS, HIGH);
             while(tmp_pixel_idx < num_of_leds_to_cmd)
             {
                 switch(pixel_data[tmp_pixel_idx].pixel_type)
@@ -457,7 +471,7 @@ RGB_Wrapper_Status_e RGB_Wrapper::update_pixels(float pdm_phi, float pdm_theta)
                 }
             }
             status = RGB_Wrapper_Status_PROCESSING_PIXEL_BITSTREAM;
-            digitalWrite(GPIO1__SSD_nCS, LOW);
+            //digitalWrite(GPIO1__SSD_nCS, LOW);
         break;
 
 
@@ -711,7 +725,14 @@ inline void RGB_Wrapper::update_circle_pixels(float phi_in_radians, float theta_
  */
 inline void RGB_Wrapper::update_circle_tracking_info(float phi_in_radians, float theta_in_radians)
 {
-    float tmp_theta_summation = theta_in_radians + theta_offset_in_radians;
+    float tmp_theta_summation;
+
+    if(theta_tracking_direction == RGB_Wrapper_Theta_Tracking_Direction__NORMAL)
+        tmp_theta_summation = theta_in_radians;
+    else
+        tmp_theta_summation = (_2PI - theta_in_radians);
+    
+    tmp_theta_summation += theta_offset_in_radians;
 
     if(tmp_theta_summation >= _2PI)
         tmp_theta_summation -= _2PI;
@@ -809,7 +830,7 @@ inline uint8_t RGB_Wrapper::get_hv_value_based_on_distance_from_pdm(uint8_t led_
     /** Must account for when the LED index has wrapped around the circle before the
      * angle of the pendulum base has.  Analogous to 2 vectors having a phase shift of 3 vs. 357 degrees; We 
      * want the lower number. */
-    if(tmp_linear_distance_between_pdm_base_and_led_idx > 15.0) 
+    if(tmp_linear_distance_between_pdm_base_and_led_idx > (half_num_of_circle_leds_on_at_once + 1.0f)) 
         tmp_cyclical_distance_between_pdm_base_and_led_in_idx = num_of_circle_pixels_f32 - tmp_linear_distance_between_pdm_base_and_led_idx;
     else
         tmp_cyclical_distance_between_pdm_base_and_led_in_idx = tmp_linear_distance_between_pdm_base_and_led_idx;

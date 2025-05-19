@@ -7,7 +7,7 @@
 #include "Drivers/AS5048A_MagSenseSPI/AS5048A_MagSenseSPI.hpp" // mag sensor
 #include "Drivers/WS2812B_RGB_LED_Strip/WS2812B_RGB_LED_Strip.hpp" // RGB LED's
 #include "Drivers/ADC_Interface/ADC_Interface.hpp" 
-#include "Drivers/SSD1357_RGB_OLED/SparkFun_RGB_OLED_64x64.h" 
+#include "Drivers/SSD1357_RGB_OLED/OLED_Graphics.h" 
 
 #include "../lib/Arduino-FOC/src/common/foc_utils.h" // sin, cosine, pi, 2pi, etc
 
@@ -72,9 +72,9 @@ void on_motor(char* cmd){ command.motor(&motor, cmd); }
 
 
 WS2812B_RGB_LED_Strip led_strip = WS2812B_RGB_LED_Strip(USB_DP__LED_DO);
-RGB_Wrapper rgb_wrapper = RGB_Wrapper(100);
+RGB_Wrapper rgb_wrapper = RGB_Wrapper(40);
 
-RGB_OLED_64x64 rgb_oled = RGB_OLED_64x64();
+OLED_Graphics oled = OLED_Graphics();
 
 
 
@@ -141,26 +141,44 @@ void setup()
   
   
   /** initialize pixel and led circle configuration: */
-  rgb_wrapper.set_rainbow_pixel_settings(0, 1, 30, 120.0f, 0.1f);
-  rgb_wrapper.set_pulse_pixel_settings(2, 2, 80.0, 0.3f, false, tmp_led_init_color_pulse);
-  rgb_wrapper.set_blink_pixel_settings(3, 3, 0.0f, 0.025f, false, tmp_led_init_color_blink);
-  rgb_wrapper.set_circle_pixel_settings(4, 99, \
+  //rgb_wrapper.set_rainbow_pixel_settings(0, 1, 30, 120.0f, 0.1f);
+  //rgb_wrapper.set_pulse_pixel_settings(2, 2, 80.0, 0.3f, false, tmp_led_init_color_pulse);
+  //rgb_wrapper.set_blink_pixel_settings(3, 3, 0.0f, 0.025f, false, tmp_led_init_color_blink);
+  rgb_wrapper.set_circle_pixel_settings(0, 39, \
                                         RGB_Wrapper_Circle__Phi_Rainbow_Theta_Q, \
                                         -0.307f, \
                                         0.001f, \
                                         6, \
                                         tmp_led_init_color_circle);
   //
+  rgb_wrapper.set_theta_offset_in_radians(-1.264767f, RGB_Wrapper_Theta_Tracking_Direction__INVERSE);
+  
   if(rgb_wrapper.finish_initializing_pixel_types() == RGB_Wrapper_Status_UPDATING_LED_BUF)
     hw_serial.println("LED types done initializing.");
   else  
     hw_serial.println("Failed to initialize LED's types/driver!");
 
 
-  #if 0
-  rgb_oled.begin(USB_DM__SSD_DS, GPIO2__SSD_nRST, GPIO1__SSD_nCS, SPI_2, 8000000);
-  rgb_oled.fillDisplay(25);
+
+  #if 1
+  oled.begin(USB_DM__SSD_DS, GPIO2__SSD_nRST, GPIO1__SSD_nCS, SPI_2, 8000000);
+  oled.fillDisplay(0); 
+  oled.write('B');
+  oled.write('O');
+  oled.write('O');
+  oled.write('T');
+  oled.write('I');
+  oled.write('N');
+  oled.write('G');
+  oled.write(' ');
+  oled.write('U');
+  oled.write('P');
+  oled.write('.');
+  oled.write('.');
+  oled.write('.');
+  
   #else 
+  /** For RGB LED timing analysis: */
   pinMode(GPIO2__SSD_nRST, OUTPUT);
   digitalWrite(GPIO2__SSD_nRST, LOW);
   pinMode(GPIO1__SSD_nCS, OUTPUT);
@@ -168,6 +186,8 @@ void setup()
   pinMode(USB_DM__SSD_DS, OUTPUT);
   digitalWrite(USB_DM__SSD_DS, LOW);
   #endif 
+
+
   /** Prescaler is automatically set when setting overflow with format != tick */
   ctrl_loop_5kHz_timer.setOverflow(200UL, MICROSEC_FORMAT);
   ctrl_loop_5kHz_timer.attachInterrupt(Update_IT_callback);
@@ -211,6 +231,31 @@ void setup()
 
   gimbal_init(hw_serial);
 
+  oled.reconfigureSpiSettings(); 
+  oled.write('D');
+  oled.write('O');
+  oled.write('N');
+  oled.write('E');
+  oled.write('\n');
+  oled.write(' '); // '\n' character is ignored if the font's x position is 0.
+  oled.write('\n'); 
+  oled.write('M');
+  oled.write('O');
+  oled.write('T');
+  oled.write('O');
+  oled.write('R');
+  oled.write(' ');
+  oled.write('C');
+  oled.write('O');
+  oled.write('N');
+  oled.write('F');
+  oled.write('I');
+  oled.write('G');
+  oled.write('U');
+  oled.write('R');
+  oled.write('E');
+  oled.write('D');
+
   pdm_torque_setpoint_biquad_c.set_steady_state_val(0.0f);
 
   command.add('M', on_motor,"my motor motion");
@@ -236,8 +281,6 @@ uint8_t value = 30;
 
 void loop() 
 {
-  //digitalWrite(GPIO2__SSD_nRST, HIGH); 
-
   #if 0
   led_strip.modify_pixel_buffer_all_leds(hue, value);
 
@@ -252,10 +295,20 @@ void loop()
     (void)led_strip.write_bitfield_array_via_dma();
   }
   #else
-    digitalWrite(USB_DM__SSD_DS, HIGH);
+    //digitalWrite(USB_DM__SSD_DS, HIGH);
     rgb_wrapper.update_pixels(pdm.pdm_theta /** pdm.pdm_phi */, encoder.getMechanicalAngle());
-    digitalWrite(USB_DM__SSD_DS, LOW);
+    //digitalWrite(USB_DM__SSD_DS, LOW);
   #endif 
+
+  
+  //oled.write(value);
+  if(value > 255)
+  {
+    value = 55;
+    //oled.write(value);
+  }
+  else
+    value++;
 
   command.run();
   motor.monitor();
@@ -296,8 +349,6 @@ void loop()
   }
 
   pdm_run_phi_offset_correction_checks();
-  
-  //digitalWrite(GPIO2__SSD_nRST, LOW);
 }
 
 
