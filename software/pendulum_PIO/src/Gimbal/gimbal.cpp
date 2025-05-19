@@ -14,7 +14,7 @@
 //  - ppr           - impulses per rotation  (cpr=ppr*4)
 //  - index pin     - (optional) we don't use this since it only serves to slow
 //                    down the startup time when the initFOC function tries to find a 0.
-Encoder encoder = Encoder(ENC_A, ENC_B, ENCODER_PPR);
+Encoder encoder = Encoder(ENC_A, ENC_B, ENCODER_PPR, ENC_Z);
 
 BLDCMotor motor = BLDCMotor( NUM_OF_POLE_PAIRS );
 
@@ -67,7 +67,7 @@ void gimbal_init(Print &print)
     motor.PID_current_d.D = MOTOR__D_CURR_PID_D_GAIN;
     
     encoder.init();
-    encoder.enableInterrupts(doA,doB);
+    encoder.enableInterrupts(doA,doB, doZ);
     
     motor.linkSensor(&encoder);  // link motor and sensor
     sw_bldc_driver.init();              // init sw_bldc_driver

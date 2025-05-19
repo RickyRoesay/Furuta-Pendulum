@@ -4,6 +4,8 @@
 #include "Arduino.h"
 #include <SPI.h>
 #include "Drivers/WS2812B_RGB_LED_Strip/WS2812B_RGB_LED_Strip.hpp" // RGB LED's
+#include "../lib/Arduino-FOC/src/common/foc_utils.h" // sin, cosine, pi, 2pi, etc
+
 //#include "stm32f405xx.h"
 
 /** This software component is meant to be a "wrapper" to aid in 
@@ -105,6 +107,10 @@ typedef enum : uint8_t {
 
 
 
+typedef enum : uint8_t {
+    RGB_Wrapper_Theta_Tracking_Direction__NORMAL, 
+    RGB_Wrapper_Theta_Tracking_Direction__INVERSE
+} RGB_Wrapper_Theta_Tracking_Direction;
 
 
 
@@ -164,6 +170,9 @@ class RGB_Wrapper
          * needed to bitbang the WS2812B LED's via DMA writes to the GPIO
          * pin setting registers. */
         RGB_Wrapper_Status_e init_periphs_for_WS2812B(void);
+        
+        RGB_Wrapper_Status_e set_theta_offset_in_radians(float pdm_theta_offset_rad, 
+                                                        RGB_Wrapper_Theta_Tracking_Direction tracking_direction);
 
         /** Calling this function marks the end of the "INIT_PIXEL_TYPES"
          * state as long as all of the led's to command have their 
@@ -207,7 +216,6 @@ class RGB_Wrapper
                                                         RGB_Wrapper_HV_Color_s color_3);
 
         RGB_Wrapper_Status_e update_pixels(float pdm_phi, float pdm_theta);
-        
 
 
     private:
@@ -230,13 +238,15 @@ class RGB_Wrapper
         float half_num_of_circle_leds_on_at_once; // math related value
 
         /** Pendulum Tracking Info: */
-        float theta_offset_in_radians;
+        float theta_offset_in_radians = _PI / 5.0f * 4.0f;
         /** if phi_upright_hue_or_value is entered as a negative value,
          * that means there will be 0 brightness at phi = 0, and full brightness
          * (or whatever the absolute magnitude of phi_upright_hue_or_value is) at phi = PI. */
         float phi_upright_hue_or_value; // for either hue or value
         uint8_t circle_led_on_start_c_idx;
         uint8_t circle_led_on_end_c_idx;
+        RGB_Wrapper_Theta_Tracking_Direction theta_tracking_direction = RGB_Wrapper_Theta_Tracking_Direction__NORMAL;
+
         
 
         float theta_with_led_offset_in_radians;

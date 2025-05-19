@@ -1,15 +1,15 @@
-#include "SparkFun_RGB_OLED_64x64.h"
+#include "OLED_Graphics.h"
 
 
 		
 
 
-RGB_OLED_64x64::RGB_OLED_64x64()
+OLED_Graphics::OLED_Graphics()
 {
 }
 
 
-void RGB_OLED_64x64::begin(uint8_t dcPin, uint8_t rstPin, uint8_t csPin, SPIClass &spiInterface, uint32_t spiFreq)
+void OLED_Graphics::begin(uint8_t dcPin, uint8_t rstPin, uint8_t csPin, SPIClass &spiInterface, uint32_t spiFreq)
 {
 	// Associate 
 	_dc = dcPin;
@@ -52,7 +52,7 @@ void RGB_OLED_64x64::begin(uint8_t dcPin, uint8_t rstPin, uint8_t csPin, SPIClas
 
 
 
-void RGB_OLED_64x64::defaultConfigure( void )
+void OLED_Graphics::defaultConfigure( void )
 {
 	// This is the suggested initialization routine from WiseChip (pg. 9 of the datasheet)
 	setCommandLock(false);
@@ -72,6 +72,8 @@ void RGB_OLED_64x64::defaultConfigure( void )
 						true, // split odd even
 						SSD1357_COLOR_MODE_65k);
   	_colorMode = SSD1357_COLOR_MODE_65k;
+
+	setDefaultFontColors(25, 0);
 
   	setContrastCurrentABC(0x88, 0x32, 0x88);
   	setMasterContrastCurrent(0x0F);
@@ -111,12 +113,12 @@ void RGB_OLED_64x64::defaultConfigure( void )
   	setFontCursorValues(OLED_START_X_IDX, OLED_START_Y_IDX, OLED_START_X_IDX, OLED_START_Y_IDX, OLED_STOP_X_IDX, OLED_STOP_Y_IDX);
 }
 
-void RGB_OLED_64x64::clearDisplay(uint8_t mode)
+void OLED_Graphics::clearDisplay(uint8_t mode)
 {
 	fillDisplay(0x0000);
 }
 
-void RGB_OLED_64x64::fillDisplay(uint16_t value)
+void OLED_Graphics::fillDisplay(uint16_t value)
 {
 	/** once "fast_filled_rectangle" has the WIDTH_IS_PROPORTIONAL_TO_COLUMNS incorporated 
 	 * into it's "writeRam" function call (like is the case with the "write" function), 
@@ -129,7 +131,7 @@ void RGB_OLED_64x64::fillDisplay(uint16_t value)
 
 
 
-void RGB_OLED_64x64::invert(bool inv)
+void OLED_Graphics::invert(bool inv)
 {
 	if(inv)
 	{
@@ -141,15 +143,15 @@ void RGB_OLED_64x64::invert(bool inv)
 	}
 }
 
-// void RGB_OLED_64x64::setContrast(uint8_t contrast)
+// void OLED_Graphics::setContrast(uint8_t contrast)
 // {
 
 // }
 
-// void RGB_OLED_64x64::flipVertical(bool flip)		// No support yet
+// void OLED_Graphics::flipVertical(bool flip)		// No support yet
 
 
-void RGB_OLED_64x64::flipHorizontal(bool flip)
+void OLED_Graphics::flipHorizontal(bool flip)
 {
 	_isFlippedH = flip;
 	setRemapColorDepth(_incV, flip, _coSwapped, _scanReversed, true, _colorMode);
@@ -158,46 +160,46 @@ void RGB_OLED_64x64::flipHorizontal(bool flip)
 
 
 
-void RGB_OLED_64x64::setCursor(uint8_t x, uint8_t y)
+void OLED_Graphics::setCursor(uint8_t x, uint8_t y)
 {
 	setCursorRAM(OLED_START_COL_IDX + x, OLED_START_ROW_IDX + y);
 }
 
 
-uint16_t RGB_OLED_64x64::getDisplayWidth(void)
+uint16_t OLED_Graphics::getDisplayWidth(void)
 {
 	return _width;
 }
 
-uint16_t RGB_OLED_64x64::getDisplayHeight(void)
+uint16_t OLED_Graphics::getDisplayHeight(void)
 {
 	return _height;
 }
 
-void RGB_OLED_64x64::setDisplayWidth(uint16_t width)
+void OLED_Graphics::setDisplayWidth(uint16_t width)
 {
 
 }
 
-void RGB_OLED_64x64::setDisplayHeight(uint16_t height)
+void OLED_Graphics::setDisplayHeight(uint16_t height)
 {
 	setMUXRatio(height);
 }
 
-void RGB_OLED_64x64::setFillColor(uint16_t value)
+void OLED_Graphics::setFillColor(uint16_t value)
 {
 	_fillColor = value;
 }
 
 
-void RGB_OLED_64x64::scrollRight(uint8_t start, uint8_t stop, uint8_t speed)
+void OLED_Graphics::scrollRight(uint8_t start, uint8_t stop, uint8_t speed)
 {
 	uint8_t scrollParameter = 0xFF;
 	setupHorizontalScroll(scrollParameter, start, stop, speed);
 	startScrolling();
 }
 
-void RGB_OLED_64x64::scrollLeft(uint8_t start, uint8_t stop, uint8_t speed)
+void OLED_Graphics::scrollLeft(uint8_t start, uint8_t stop, uint8_t speed)
 {
 	uint8_t scrollParameter = 0x01;
 	setupHorizontalScroll(scrollParameter, start, stop, speed);
@@ -205,10 +207,10 @@ void RGB_OLED_64x64::scrollLeft(uint8_t start, uint8_t stop, uint8_t speed)
 }
 
 //TODO Add 0x29/0x2A vertical scrolling commands
-// void RGB_OLED_64x64::scrollUp(uint8_t start, uint8_t stop);
+// void OLED_Graphics::scrollUp(uint8_t start, uint8_t stop);
 //void scrollVertLeft(uint8_t start, uint8_t stop);
 
-void RGB_OLED_64x64::scrollStop(void)
+void OLED_Graphics::scrollStop(void)
 {
 	stopScrolling();
 }

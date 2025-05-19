@@ -4,8 +4,8 @@ A libary to use the SSD1357 driver in conjuction with a particular OLED display 
 
 */
 
-#ifndef SF_RGB_OLED_64X64_H
-#define	SF_RGB_OLED_64X64_H
+#ifndef OLED_GRAPHICS_H
+#define	OLED_GRAPHICS_H
 
 // #include "screen65k.h"				// This is a method of storing arbitrary RGB images in 16-bit depth where two colors are 5 bits and the last is 6 bits
 #include "SparkFun_SSD1357_OLED.h"	// This is a driver that takes screens and displays them on a physical device
@@ -16,7 +16,7 @@ A libary to use the SSD1357 driver in conjuction with a particular OLED display 
 #define OLED_SCROLL_SLOW 0x02
 #define OLED_SCROLL_SLOWEST 0x03
 
-class RGB_OLED_64x64 : public SSD1357 {
+class OLED_Graphics : public SSD1357 {
 private:
 protected:
 
@@ -27,7 +27,7 @@ protected:
 
 public:
 
-	RGB_OLED_64x64();
+	OLED_Graphics();
 
 	void begin(uint8_t dcPin, uint8_t rstPin, uint8_t csPin, SPIClass &spiInterface = SPI, uint32_t spiFreq = SSD1357_SPI_MAX_FREQ) override;
 	void defaultConfigure( void );

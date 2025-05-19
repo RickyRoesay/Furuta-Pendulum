@@ -88,6 +88,20 @@ RGB_Wrapper_Status_e RGB_Wrapper::init_periphs_for_WS2812B(void)
 
 
 
+
+
+        
+RGB_Wrapper_Status_e RGB_Wrapper::set_theta_offset_in_radians(float pdm_theta_offset_rad,
+                                                        RGB_Wrapper_Theta_Tracking_Direction tracking_direction)
+{
+    theta_offset_in_radians = pdm_theta_offset_rad;
+    theta_tracking_direction = tracking_direction;
+}
+
+
+
+
+
 RGB_Wrapper_Status_e RGB_Wrapper::finish_initializing_pixel_types(void)
 {
     uint8_t tmp_pixel_idx_range_itr = 0;
@@ -711,7 +725,14 @@ inline void RGB_Wrapper::update_circle_pixels(float phi_in_radians, float theta_
  */
 inline void RGB_Wrapper::update_circle_tracking_info(float phi_in_radians, float theta_in_radians)
 {
-    float tmp_theta_summation = theta_in_radians + theta_offset_in_radians;
+    float tmp_theta_summation;
+
+    if(theta_tracking_direction == RGB_Wrapper_Theta_Tracking_Direction__NORMAL)
+        tmp_theta_summation = theta_in_radians;
+    else
+        tmp_theta_summation = (_2PI - theta_in_radians);
+    
+    tmp_theta_summation += theta_offset_in_radians;
 
     if(tmp_theta_summation >= _2PI)
         tmp_theta_summation -= _2PI;

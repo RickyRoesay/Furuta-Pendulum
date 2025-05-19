@@ -17,7 +17,7 @@ Owen Lyke
 #include <Arduino.h>
 #include <SPI.h>
 #include "fast_hsv2rgb.h"
-#include "RGB_OLED_Screen_Settings.h"
+#include "OLED_Screen_Settings.h"
 
 #define HSV_USE_ASSEMBLY
 

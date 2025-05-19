@@ -126,8 +126,8 @@ bool MicroviewMonochromeProgMemBMPFont::advanceState(uint8_t val, uint16_t scree
 		if(!_prevWriteCausedNewline)
 		{
 			newX = reset_x;
-			// newY += _fontHeight + 1;
-			newY += _fontHeight;
+			newY += _fontHeight + 4;
+			//newY += _fontHeight;
 
 			cursor_x = newX;
 			cursor_y = newY;
@@ -147,13 +147,14 @@ bool MicroviewMonochromeProgMemBMPFont::advanceState(uint8_t val, uint16_t scree
 
 	// If the character that is about to be printed is not a newline character then it will probably take up space and so the cursor should be incremented. 
 	// Its OK to increment cursor data because the frame data exists in another array that the driver will access 
-	// newX += _fontWidth + 1;	// Move left-to-right first
-	newX += _fontWidth;
+
+	newX += _fontWidth + 1;	// Move left-to-right first
+	//newX += _fontWidth;
 	if((newX > (margin_x - _fontWidth)))	// But start a new line if you go over the edge
 	{
 		newX = reset_x;
-		// newY += _fontHeight + 1;
-		newY += _fontHeight;
+		newY += _fontHeight + 1;
+		//newY += _fontHeight;
 
 		_prevWriteCausedNewline = true;
 
