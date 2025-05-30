@@ -1,0 +1,31 @@
+TIMx_CCRx    capture compare reg
+
+CK_CNT  prescaler output that's enabled with CEN  
+
+TIMx_CR1  control register 1
+	CKD clock division
+	ARPE
+	CMS center aligned mode selection
+	DIR (up vs down counter) assuming center vs encoder mode isn't selected
+	OPM one pulse mode
+	URS  update request source, 0 = lots of events generate an update-interupt/DMA request, 1 = only counter-over/underflow generate an update interrupt/dma req
+	UDIS  update disable, 0 = UEV enabled, 1 = uev disabled
+	CEN counter enable bit 
+
+CCXIF flag
+
+auto-reload preload enable bit (ARPE), 0 = TIMx_ARR is not preloaded (immediated takes effect), if = 1, then TIMx_ARR change takes effect mid counter period
+
+• Counter register (TIMx_CNT)
+• Prescaler register (TIMx_PSC)  also prescale control register
+• Auto-reload register (TIMx_ARR)
+• Repetition counter register (TIMx_RCR)
+
+TIMx_ARR  auto reload, tells counter to restart to 0 (upcounting), and generates a counter overflow event 
+
+if the repetition counter is used, the update event (UEV) is generated upon over/underflow of TIMx_CNT
+
+if URS bit (update request selection) in TIMx_CR1, 
+
+
+12.4 tim1 regs, at pg 287
