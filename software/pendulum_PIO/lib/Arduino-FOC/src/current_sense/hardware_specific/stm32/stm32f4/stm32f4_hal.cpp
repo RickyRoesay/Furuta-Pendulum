@@ -67,7 +67,7 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
     
   /**Configures for the selected ADC injected channel its corresponding rank in the sequencer and its sample time 
     */
-  sConfigInjected.InjectedNbrOfConversion = _isset(cs_params->pins[2]) ? 3 : 2;
+  sConfigInjected.InjectedNbrOfConversion = 3;//_isset(cs_params->pins[2]) ? 3 : 2;
   sConfigInjected.InjectedSamplingTime = ADC_SAMPLETIME_3CYCLES;
   sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONVEDGE_RISING;  
   sConfigInjected.AutoInjectedConv = DISABLE;
@@ -123,18 +123,20 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
     return -1;
   }
 
-  // third channel - if exists
-  if(_isset(cs_params->pins[2])){
-    sConfigInjected.InjectedRank = ADC_INJECTED_RANK_3;
-    sConfigInjected.InjectedChannel = _getADCChannel(analogInputToPinName(cs_params->pins[2]));
-    if (HAL_ADCEx_InjectedConfigChannel(&hadc, &sConfigInjected) != HAL_OK){
+  /** use the third channel for the voltage sensing since we don't
+   * ever need 3 current channels (ODESC only has 2 current sensors for the
+   * phases).
+   * 
+   * Bus voltage sensing is done using pin PA6 on the ODESC. */
+  sConfigInjected.InjectedRank = ADC_INJECTED_RANK_3;
+  sConfigInjected.InjectedChannel = _getADCChannel(analogInputToPinName(PA6));
+  if (HAL_ADCEx_InjectedConfigChannel(&hadc, &sConfigInjected) != HAL_OK){
 #ifdef SIMPLEFOC_STM32_DEBUG
-      SIMPLEFOC_DEBUG("STM32-CS: ERR: cannot init injected channel: ", (int)_getADCChannel(analogInputToPinName(cs_params->pins[2]))) ;
+    SIMPLEFOC_DEBUG("STM32-CS: ERR: cannot init injected channel: ", (int)_getADCChannel(analogInputToPinName(cs_params->pins[2]))) ;
 #endif
-      return -1;
-    }
+    return -1;
   }
-  
+
   cs_params->adc_handle = &hadc;
   return 0;
 }
@@ -150,10 +152,10 @@ void _adc_gpio_init(Stm32CurrentSenseParams* cs_params, const int pinA, const in
     pinmap_pinout(analogInputToPinName(pinB), PinMap_ADC);
     cs_params->pins[cnt++] = pinB;
   }
-  if(_isset(pinC)){ 
-    pinmap_pinout(analogInputToPinName(pinC), PinMap_ADC);
-    cs_params->pins[cnt] = pinC;
-  }
+
+  /** use 3rd channel for voltage sensing, PA6 is the voltage 
+   * sensing input pin on the ODESC 4.2. */
+  pinmap_pinout(analogInputToPinName(PA6), PinMap_ADC);
 }
 
 extern "C" {

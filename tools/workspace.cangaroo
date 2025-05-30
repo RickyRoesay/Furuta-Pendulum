@@ -1,17 +1,17 @@
 <cangaroo-workspace>
  <tabs>
-  <tab TimestampMode="0" title="Trace" mode="aggregated" type="TraceWindow">
-   <LinearTraceView AutoScroll="1"/>
+  <tab TimestampMode="2" mode="linear" type="TraceWindow" title="Trace">
+   <LinearTraceView AutoScroll="0"/>
    <AggregatedTraceView SortColumn="-1"/>
   </tab>
  </tabs>
  <setup>
   <network name="Network 1">
    <interfaces>
-    <interface driver="CANable SLCAN" auto-restart-time="100" name="COM7" bitrate="1000000" configure="1" sample-point="875" triple-sampling="0" sample-point-fd="875" auto-restart="0" bitrate-fd="4000000" listen-only="0" one-shot="0" can-fd="0" type="can"/>
+    <interface driver="CANable SLCAN" sample-point-fd="875" triple-sampling="0" one-shot="0" name="COM7" can-fd="0" bitrate="1000000" auto-restart="0" bitrate-fd="4000000" listen-only="0" type="can" sample-point="875" configure="1" auto-restart-time="100"/>
    </interfaces>
    <databases>
-    <database filename="C:/Users/Owner/Documents/ODESC V4.2/debug.dbc" type="dbc"/>
+    <database filename="C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/debug.dbc" type="dbc"/>
    </databases>
   </network>
  </setup>

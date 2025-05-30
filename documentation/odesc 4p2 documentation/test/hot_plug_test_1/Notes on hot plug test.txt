@@ -1,3 +1,0 @@
-CC-65 current sensor used, on 10mV/A scaling (20kHz bandwidth....)
-
-yellow is 20V measured at board, blue is current
