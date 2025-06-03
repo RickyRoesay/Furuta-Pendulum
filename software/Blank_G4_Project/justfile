@@ -1,0 +1,16 @@
+#alias g := gen_makefile
+alias b := build
+alias c := clean
+
+set shell := ["powershell.exe", "/c"]
+
+#gen_makefile:
+#    cmake -DCMAKE_TOOLCHAIN_FILE="cubeide-gcc.cmake" -S ./ -B Debug -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug
+
+build:
+    cmake -DCMAKE_TOOLCHAIN_FILE="cubeide-gcc.cmake" -S ./ -B Debug -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug
+    make -C Debug VERBOSE=1 -j
+
+clean:
+    Remove-Item -Path "./Debug" -Recurse -Force
+
