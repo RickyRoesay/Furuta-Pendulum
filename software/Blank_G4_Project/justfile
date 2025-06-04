@@ -1,16 +1,20 @@
-#alias g := gen_makefile
 alias b := build
 alias c := clean
 
 set shell := ["powershell.exe", "/c"]
 
-#gen_makefile:
-#    cmake -DCMAKE_TOOLCHAIN_FILE="cubeide-gcc.cmake" -S ./ -B Debug -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug
+build_folder_path := absolute_path('build')
+
+clean_command_string := if path_exists(build_folder_path) == "true" {
+    'Remove-Item -Path "./build" -Recurse -Force'
+} else {
+    'echo "nothing to clean"'
+}
 
 build:
-    cmake -DCMAKE_TOOLCHAIN_FILE="cubeide-gcc.cmake" -S ./ -B Debug -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug
-    make -C Debug VERBOSE=1 -j
+    cmake -DCMAKE_TOOLCHAIN_FILE="cubeide-gcc.cmake" -S ./ -B build -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=build
+    make -C build VERBOSE=1 -j
 
 clean:
-    Remove-Item -Path "./Debug" -Recurse -Force
+    {{clean_command_string}}
 

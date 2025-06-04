@@ -63,8 +63,8 @@ set (RUNTIME_LIBRARY_SYSCALLS "--specs=nosys.specs")
 
 set (PROJECT_SOURCES
 	# LIST SOURCE FILES HERE
-	Startup/startup_stm32g474ceux.s
-	Sources/main.c
+	source/vendor/startup_stm32g474ceux.s
+	source/main.c
 
 
 	)
