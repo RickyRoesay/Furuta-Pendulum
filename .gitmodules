@@ -1,0 +1,8 @@
+[submodule "software/opendulum_sw_proj/source/vendor/STM32G4xx_HAL_Driver"]
+	path = software/opendulum_sw_proj/source/vendor/STM32G4xx_HAL_Driver
+	url = https://github.com/STMicroelectronics/stm32g4xx_hal_driver.git
+	branch = master
+[submodule "software/opendulum_sw_proj/source/vendor/cmsis_device_g4"]
+	path = software/opendulum_sw_proj/source/vendor/cmsis_device_g4
+	url = https://github.com/STMicroelectronics/cmsis_device_g4.git
+	branch = master

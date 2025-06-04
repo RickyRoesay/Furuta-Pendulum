@@ -15,6 +15,11 @@
 #			- arm-none-eabi-gcc installed via MSYS, by typing:   <pacman -S mingw-w64-x86_64-arm-none-eabi-gcc>   without the <>
 #     - just, using winget, by typing   <winget install --id Casey.Just --exact>   into command line without the <> 
 #
+#  GIT SUBMODULE CMD MESSAGES
+#  git submodule add -b "master" 'https://github.com/STMicroelectronics/stm32g4xx_hal_driver.git' 'software/opendulum_sw_proj/source/vendor/STM32G4xx_HAL_Driver'
+#  git submodule add -b "master" 'https://github.com/STMicroelectronics/cmsis_device_g4.git' 'software/opendulum_sw_proj/source/vendor/cmsis_device_g4'
+#
+#
 #
 #############################################################################################################################
 cmake_minimum_required(VERSION 3.20)
