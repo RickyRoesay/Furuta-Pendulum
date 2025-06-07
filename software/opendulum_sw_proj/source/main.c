@@ -17,13 +17,281 @@
  */
 
 #include <stdint.h>
+#include <math.h>
+#include "stm32g4xx.h"
+
+#include "stm32g4xx_ll_rcc.h"
+#include "stm32g4xx_ll_bus.h"
+#include "stm32g4xx_ll_crs.h"
+#include "stm32g4xx_ll_system.h"
+#include "stm32g4xx_ll_exti.h"
+#include "stm32g4xx_ll_cortex.h"
+#include "stm32g4xx_ll_utils.h"
+#include "stm32g4xx_ll_pwr.h"
+#include "stm32g4xx_ll_dma.h"
+#include "stm32g4xx_ll_gpio.h"
+#include "stm32g4xx_hal_rcc.h"
 
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
 #endif
 
+
+#define RCC_ERROR_NONE 0
+#define RCC_ERROR_TIMEOUT 1
+
+
+__IO uint8_t ubReadyState = 0;
+
+
+#if (USE_TIMEOUT == 1)
+#define TIMEOUT_VALUE    1000 /* Time-out set to 1 sec */
+#endif /* USE_TIMEOUT */
+
+
+
+static void MX_GPIO_Init(void);
+
+uint32_t RCC_WaitForHSEReady(void);
+void     LED_Blinking(uint32_t Period);
+
+
+
+
+
 int main(void)
 {
-    /* Loop forever */
-	for(;;);
+  register uint32_t frequency = 0;
+
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
+  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
+
+
+  /* System interrupt init*/
+  NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
+
+
+  /** Disable the internal Pull-Up in Dead Battery pins of UCPD peripheral */
+  LL_PWR_DisableUCPDDeadBattery();
+
+#if 0
+  LL_FLASH_SetLatency(LL_FLASH_LATENCY_0);
+  while(LL_FLASH_GetLatency() != LL_FLASH_LATENCY_0)
+  {
+  }
+  LL_PWR_SetRegulVoltageScaling(LL_PWR_REGU_VOLTAGE_SCALE1);
+  LL_RCC_HSI_Enable();
+   /* Wait till HSI is ready */
+  while(LL_RCC_HSI_IsReady() != 1)
+  {
+  }
+
+  LL_RCC_HSI_SetCalibTrimming(64);
+  LL_RCC_SetSysClkSource(LL_RCC_SYS_CLKSOURCE_HSI);
+   /* Wait till System clock is ready */
+  while(LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_HSI)
+  {
+  }
+
+  /* Set AHB prescaler*/
+  LL_RCC_SetAHBPrescaler(LL_RCC_SYSCLK_DIV_1);
+  LL_RCC_SetAPB1Prescaler(LL_RCC_APB1_DIV_1);
+  LL_RCC_SetAPB2Prescaler(LL_RCC_APB2_DIV_1);
+
+  LL_Init1msTick(16000000);
+
+  LL_SetSystemCoreClock(16000000);
+#endif 
+
+
+  /** NOTE: as per TRM section 7.4.3 RCC_CFGR, default value of HPRE is 0, and 
+   * as per TRM section 6.1.5, you must set AHB clock divider by 2 before setting
+   * the higher frequency.  Must add that here, before switching over to PLL/Boost mode. */
+
+  /** NOTE: must also set flash wait state to maximum, since default is
+   * WS1, 2 wait cycle per access (for <60MHz for non boost mode)
+   */
+
+
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+  /** Configure the main internal regulator output voltage */
+  HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1);
+
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV2;
+  RCC_OscInitStruct.PLL.PLLN = 20;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
+  RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  MX_GPIO_Init();
+
+#if 0
+  /* Configure Systick to 1 ms with the current frequency which should be HSI */
+  frequency = HSI_VALUE;
+
+  LL_Init1msTick(frequency);
+
+  /* Start HSE */
+
+  /* Configure NVIC for RCC */
+  NVIC_EnableIRQ(RCC_IRQn);
+  NVIC_SetPriority(RCC_IRQn, 0);
+
+  /* Enable interrupt on HSE ready */
+  /* Enable the CSS
+     Enable HSE */
+  /* Note : the clock is switched to HSE in the RCC_IRQHandler ISR */
+  LL_RCC_EnableIT_HSERDY();
+  LL_RCC_HSE_EnableCSS();
+  LL_RCC_HSE_Enable();
+
+
+  if (RCC_WaitForHSEReady() == RCC_ERROR_NONE)
+  {
+    /* Turn-on LED2 to indicate that HSE is ready */
+    
+    /* Turn LED2 on */
+    LL_GPIO_SetOutputPin(LED2_GPIO_Port, LED2_Pin);
+    ubReadyState = 1 ;
+  }
+  else
+  {
+    /* Problem to switch to HSE, blink LED2 */
+    LED_Blinking(LED_BLINK_ERROR);
+    ubReadyState = 0xE ;
+  }
+  #endif 
+
+  while (1)
+  {
+
+  }
 }
+
+
+static void MX_GPIO_Init(void)
+{
+  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  /* GPIO Ports Clock Enable */
+  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
+
+  /**/
+  LL_GPIO_ResetOutputPin(LED2_GPIO_Port, LED2_Pin);
+
+  /**/
+  GPIO_InitStruct.Pin = LED2_Pin;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  LL_GPIO_Init(LED2_GPIO_Port, &GPIO_InitStruct);
+}
+
+
+
+uint32_t RCC_WaitForHSEReady()
+{
+#if (USE_TIMEOUT == 1)
+  /* Set timeout to 1 sec */
+  uint32_t timeout = TIMEOUT_VALUE;
+#endif /* USE_TIMEOUT */
+
+  /* Check that the condition is met */
+  while (LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_HSE)
+  {
+#if (USE_TIMEOUT == 1)
+    /* Check Systick counter flag to decrement the time-out value */
+    if (LL_SYSTICK_IsActiveCounterFlag())
+    {
+      if (--timeout == 0)
+      {
+        /* Time-out occurred. Return an error */
+        return RCC_ERROR_TIMEOUT;
+      }
+    }
+#endif /* USE_TIMEOUT */
+  }
+  return RCC_ERROR_NONE;
+}
+
+
+/**
+  * @brief  Set LED2 to Blinking mode for an infinite loop (toggle period based on value provided as input parameter).
+  * @param  Period : Period of time (in ms) between each toggling of LED
+  *   This parameter can be user defined values. Pre-defined values used in that example are :
+  *     @arg LED_BLINK_FAST : Fast Blinking
+  *     @arg LED_BLINK_SLOW : Slow Blinking
+  *     @arg LED_BLINK_ERROR : Error specific Blinking
+  * @retval None
+  */
+void LED_Blinking(uint32_t Period)
+{
+  /* Turn LED2 on */
+  LL_GPIO_SetOutputPin(LED2_GPIO_Port, LED2_Pin);
+
+  /* Toggle IO in an infinite loop */
+  while (1)
+  {
+    /* Error if LED2 is slowly blinking (1 sec. period) */
+    LL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
+    LL_mDelay(Period);
+  }
+}
+
+/******************************************************************************/
+/*   USER IRQ HANDLER TREATMENT                                               */
+/******************************************************************************/
+/**
+  * @brief  This function handles the HSE ready detection (called in RCC_IRQHandler)
+  * @param  None
+  * @retval None
+  */
+void HSEReady_Callback(void)
+{
+  /* Switch the system clock to HSE */
+  LL_RCC_SetSysClkSource(LL_RCC_SYS_CLKSOURCE_HSE);
+
+  /* 1ms config with HSE 24MHz*/
+  LL_Init1msTick(HSE_VALUE);
+}
+
+/**
+  * @brief  This function handles failure detected on the HSE clock (called in NMI_Handler)
+  * @param  None
+  * @retval None
+  */
+void HSEFailureDetection_Callback(void)
+{
+  LED_Blinking(LED_BLINK_ERROR);
+}
+

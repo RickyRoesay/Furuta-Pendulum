@@ -13,7 +13,7 @@
 #		Dependencies: 
 #			- CMake and Make
 #			- arm-none-eabi-gcc installed via MSYS, by typing:   <pacman -S mingw-w64-x86_64-arm-none-eabi-gcc>   without the <>
-#     - just, using winget, by typing   <winget install --id Casey.Just --exact>   into command line without the <> 
+#           - just, using winget, by typing   <winget install --id Casey.Just --exact>   into command line without the <> 
 #
 #  GIT SUBMODULE CMD MESSAGES
 #  git submodule add -b "master" 'https://github.com/STMicroelectronics/stm32g4xx_hal_driver.git' 'software/opendulum_sw_proj/source/vendor/STM32G4xx_HAL_Driver'
@@ -27,20 +27,9 @@ cmake_minimum_required(VERSION 3.20)
 ###################### CONSTANTS ######################################
 set (PROJECT_TYPE_EXECUTABLE          "exe")
 set (PROJECT_TYPE_STATIC_LIBRARY      "static-lib")
-set (MCPU_CORTEX_M0				      "-mcpu=cortex-m0")
-set (MCPU_CORTEX_M0PLUS				  "-mcpu=cortex-m0plus")
-set (MCPU_CORTEX_M3				      "-mcpu=cortex-m3")
 set (MCPU_CORTEX_M4				      "-mcpu=cortex-m4")
-set (MCPU_CORTEX_M7				      "-mcpu=cortex-m7")
-set (MCPU_CORTEX_M33				  "-mcpu=cortex-m33")
-set (MCPU_CORTEX_M55				  "-mcpu=cortex-m55")
-set (MCPU_CORTEX_M85				  "-mcpu=cortex-m85")
 set (MFPU_FPV4_SP_D16                 "-mfpu=fpv4-sp-d16")
 set (MFPU_FPV5_D16                    "-mfpu=fpv5-d16")
-set (RUNTIME_LIBRARY_REDUCED_C        "--specs=nano.specs")
-set (RUNTIME_LIBRARY_STD_C            "")
-set (RUNTIME_LIBRARY_SYSCALLS_MINIMAL "--specs=nosys.specs")
-set (RUNTIME_LIBRARY_SYSCALLS_NONE    "")
 set (MFLOAT_ABI_SOFTWARE              "-mfloat-abi=soft")
 set (MFLOAT_ABI_HARDWARE              "-mfloat-abi=hard")
 set (MFLOAT_ABI_MIX                   "-mfloat-abi=softfp")
@@ -56,33 +45,37 @@ set (MFLOAT_ABI_MIX                   "-mfloat-abi=softfp")
 
 
 ###################### VARIABLES ######################################
-set (PROJECT_NAME             "DMA_POC")
+set (PROJECT_NAME             "OPENDULUM_SW_PROJ")
 set (PROJECT_TYPE             "exe")
 set (LINKER_SCRIPT            "../STM32G474CEUX_FLASH.ld")
 set (MCPU                     "-mcpu=Cortex-M4")
 set (MFPU                     "-mfpu=fpv4-sp-d16")
-set (MFLOAT_ABI               "")
-set (RUNTIME_LIBRARY          "--specs=nano.specs")
-set (RUNTIME_LIBRARY_SYSCALLS "--specs=nosys.specs")
 
+set (STM32G4xx_HAL_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/STM32G4xx_HAL_Driver/Src")
 
 set (PROJECT_SOURCES
 	# LIST SOURCE FILES HERE
 	source/vendor/startup_stm32g474ceux.s
 	source/main.c
-
-
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_adc.c
 	)
+
 
 set (PROJECT_DEFINES
 	# LIST COMPILER DEFINITIONS HERE
-
+	STM32G474xx
+	USE_TIMEOUT=1
     )
+
 
 set (PROJECT_INCLUDES
 	# LIST INCLUDE DIRECTORIES HERE
-
+	${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/cmsis_device_g4/Include
+	${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/cmsis_core/
+	${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/STM32G4xx_HAL_Driver/
+	${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/STM32G4xx_HAL_Driver/Inc/
     )
+
 
 ############ MODIFY ACCORDING TO REQUIREMENTS) ########################
 
