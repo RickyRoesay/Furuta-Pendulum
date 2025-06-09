@@ -20,6 +20,8 @@
 #include <math.h>
 #include "stm32g4xx.h"
 
+#include "stm32g4xx_hal.h"
+
 #include "stm32g4xx_ll_rcc.h"
 #include "stm32g4xx_ll_bus.h"
 #include "stm32g4xx_ll_crs.h"
@@ -31,6 +33,8 @@
 #include "stm32g4xx_ll_dma.h"
 #include "stm32g4xx_ll_gpio.h"
 #include "stm32g4xx_hal_rcc.h"
+#include "stm32g4xx_hal_flash.h"
+#include "system_stm32g4xx.h"
 
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
@@ -41,18 +45,12 @@
 #define RCC_ERROR_TIMEOUT 1
 
 
-__IO uint8_t ubReadyState = 0;
-
-
-#if (USE_TIMEOUT == 1)
-#define TIMEOUT_VALUE    1000 /* Time-out set to 1 sec */
-#endif /* USE_TIMEOUT */
+__IO uint8_t startup_status = 0;
 
 
 
-static void MX_GPIO_Init(void);
+//static void MX_GPIO_Init(void);
 
-uint32_t RCC_WaitForHSEReady(void);
 void     LED_Blinking(uint32_t Period);
 
 
@@ -61,7 +59,9 @@ void     LED_Blinking(uint32_t Period);
 
 int main(void)
 {
-  register uint32_t frequency = 0;
+  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();
+  __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();
+  __HAL_FLASH_DATA_CACHE_ENABLE();
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
@@ -109,25 +109,48 @@ int main(void)
    * as per TRM section 6.1.5, you must set AHB clock divider by 2 before setting
    * the higher frequency.  Must add that here, before switching over to PLL/Boost mode. */
 
-  /** NOTE: must also set flash wait state to maximum, since default is
-   * WS1, 2 wait cycle per access (for <60MHz for non boost mode)
-   */
+
+
+
+
+  /** This sets a HAL variable used by other functions in the HAL library,
+   * such as the default function for "HAL_InitTick," 
+   * SPI timeout checks or ADC initialization wait loops. 
+   * 
+   * At this point, the SYSCLK is running off of the 16MHz HSI,
+   * so set the HAL variable that tracks HCLK accordingly:*/
+  LL_SetSystemCoreClock(HSI_VALUE);
+
+  
+  /** We are using the default, weak version of the HAL's SysTick
+   * implementation that triggers an interrupt via SysTick. This prevents
+   * an infinite while loop from occurring if the HSE or PLL fail to stabilize. 
+   * 
+   * More info on the ARM SysTick can be found here: 
+   * https://developer.arm.com/documentation/101407/0542/Debugging/Debug-Windows-and-Dialogs/Core-Peripherals/Armv7-M-cores/Armv7-M--System-Tick-Timer */
+  if (HAL_InitTick(0) != HAL_OK)
+  {
+    startup_status |= HAL_ERROR;
+  }
+  
+  
+  /** Configure the main internal regulator output voltage */
+  HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1_BOOST);
+
 
 
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  
+  /** Since there is no crystal resonator or high precision clock source
+   * for the moteus c1 (the HW i'm testing on) just initialize the LSI 
+   * for the IWDG. */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI;// | RCC_OSCILLATORTYPE_HSE;
+  //RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.HSEState = RCC_HSE_OFF;
 
-  /** Configure the main internal regulator output voltage */
-  HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1);
-
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI; //RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV2;
   RCC_OscInitStruct.PLL.PLLN = 20;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
@@ -135,11 +158,10 @@ int main(void)
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
-    Error_Handler();
+    startup_status |= HAL_ERROR;
   }
 
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
+  /** Initializes the CPU, AHB and APB buses clocks. */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
@@ -147,49 +169,16 @@ int main(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  /** TRM section 4.3.3 (or 3.3.3 or 5.3.3), for max frequency we need 4 wait states, or 5 cpu 
+   * cycles for flash access latency. */
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
   {
-    Error_Handler();
+    startup_status |= HAL_ERROR;
   }
 
-  MX_GPIO_Init();
 
-#if 0
-  /* Configure Systick to 1 ms with the current frequency which should be HSI */
-  frequency = HSI_VALUE;
+  //MX_GPIO_Init();
 
-  LL_Init1msTick(frequency);
-
-  /* Start HSE */
-
-  /* Configure NVIC for RCC */
-  NVIC_EnableIRQ(RCC_IRQn);
-  NVIC_SetPriority(RCC_IRQn, 0);
-
-  /* Enable interrupt on HSE ready */
-  /* Enable the CSS
-     Enable HSE */
-  /* Note : the clock is switched to HSE in the RCC_IRQHandler ISR */
-  LL_RCC_EnableIT_HSERDY();
-  LL_RCC_HSE_EnableCSS();
-  LL_RCC_HSE_Enable();
-
-
-  if (RCC_WaitForHSEReady() == RCC_ERROR_NONE)
-  {
-    /* Turn-on LED2 to indicate that HSE is ready */
-    
-    /* Turn LED2 on */
-    LL_GPIO_SetOutputPin(LED2_GPIO_Port, LED2_Pin);
-    ubReadyState = 1 ;
-  }
-  else
-  {
-    /* Problem to switch to HSE, blink LED2 */
-    LED_Blinking(LED_BLINK_ERROR);
-    ubReadyState = 0xE ;
-  }
-  #endif 
 
   while (1)
   {
@@ -198,6 +187,8 @@ int main(void)
 }
 
 
+
+#if 0
 static void MX_GPIO_Init(void)
 {
   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -219,41 +210,6 @@ static void MX_GPIO_Init(void)
 
 
 
-uint32_t RCC_WaitForHSEReady()
-{
-#if (USE_TIMEOUT == 1)
-  /* Set timeout to 1 sec */
-  uint32_t timeout = TIMEOUT_VALUE;
-#endif /* USE_TIMEOUT */
-
-  /* Check that the condition is met */
-  while (LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_HSE)
-  {
-#if (USE_TIMEOUT == 1)
-    /* Check Systick counter flag to decrement the time-out value */
-    if (LL_SYSTICK_IsActiveCounterFlag())
-    {
-      if (--timeout == 0)
-      {
-        /* Time-out occurred. Return an error */
-        return RCC_ERROR_TIMEOUT;
-      }
-    }
-#endif /* USE_TIMEOUT */
-  }
-  return RCC_ERROR_NONE;
-}
-
-
-/**
-  * @brief  Set LED2 to Blinking mode for an infinite loop (toggle period based on value provided as input parameter).
-  * @param  Period : Period of time (in ms) between each toggling of LED
-  *   This parameter can be user defined values. Pre-defined values used in that example are :
-  *     @arg LED_BLINK_FAST : Fast Blinking
-  *     @arg LED_BLINK_SLOW : Slow Blinking
-  *     @arg LED_BLINK_ERROR : Error specific Blinking
-  * @retval None
-  */
 void LED_Blinking(uint32_t Period)
 {
   /* Turn LED2 on */
@@ -267,31 +223,16 @@ void LED_Blinking(uint32_t Period)
     LL_mDelay(Period);
   }
 }
+#endif
+
+
 
 /******************************************************************************/
 /*   USER IRQ HANDLER TREATMENT                                               */
 /******************************************************************************/
-/**
-  * @brief  This function handles the HSE ready detection (called in RCC_IRQHandler)
-  * @param  None
-  * @retval None
-  */
-void HSEReady_Callback(void)
-{
-  /* Switch the system clock to HSE */
-  LL_RCC_SetSysClkSource(LL_RCC_SYS_CLKSOURCE_HSE);
 
-  /* 1ms config with HSE 24MHz*/
-  LL_Init1msTick(HSE_VALUE);
-}
-
-/**
-  * @brief  This function handles failure detected on the HSE clock (called in NMI_Handler)
-  * @param  None
-  * @retval None
-  */
-void HSEFailureDetection_Callback(void)
+/** extern "C" */void SysTick_Handler(void)
 {
-  LED_Blinking(LED_BLINK_ERROR);
+  HAL_IncTick();
 }
 

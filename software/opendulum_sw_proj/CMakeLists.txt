@@ -57,7 +57,95 @@ set (PROJECT_SOURCES
 	# LIST SOURCE FILES HERE
 	source/vendor/startup_stm32g474ceux.s
 	source/main.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_adc_ex.c
 	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_adc.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_comp.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_cordic.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_cortex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_crc_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_crc.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_cryp_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_cryp.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_dac_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_dac.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_dma_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_dma.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_exti.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_fdcan.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_flash_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_flash_ramfunc.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_flash.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_fmac.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_gpio.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_hrtim.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_i2c_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_i2c.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_i2s.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_irda.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_iwdg.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_lptim.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_msp_template.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_nand.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_nor.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_opamp_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_opamp.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_pcd_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_pcd.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_pwr_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_pwr.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_qspi.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_rcc_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_rcc.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_rng.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_rtc_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_rtc.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_sai_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_sai.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_smartcard_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_smartcard.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_smbus_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_smbus.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_spi_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_spi.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_sram.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_tim_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_tim.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_uart_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_uart.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_usart_ex.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_usart.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_wwdg.c
+
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal.c
+
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_adc.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_comp.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_cordic.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_crc.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_crs.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_dac.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_dma.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_exti.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_fmac.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_fmc.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_gpio.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_hrtim.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_i2c.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_lptim.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_lpuart.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_opamp.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_pwr.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_rcc.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_rng.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_rtc.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_spi.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_tim.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_ucpd.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_usart.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_usb.c
+	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_utils.c
+	
+	source/vendor/cmsis_device_g4/Source/Templates/system_stm32g4xx.c
 	)
 
 
@@ -65,13 +153,15 @@ set (PROJECT_DEFINES
 	# LIST COMPILER DEFINITIONS HERE
 	STM32G474xx
 	USE_TIMEOUT=1
+	USE_FULL_LL_DRIVER
     )
 
 
 set (PROJECT_INCLUDES
 	# LIST INCLUDE DIRECTORIES HERE
-	${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/cmsis_device_g4/Include
+	${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/cmsis_device_g4/Include/
 	${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/cmsis_core/
+	${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/
 	${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/STM32G4xx_HAL_Driver/
 	${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/STM32G4xx_HAL_Driver/Inc/
     )

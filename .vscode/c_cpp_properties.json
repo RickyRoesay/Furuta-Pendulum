@@ -10,7 +10,8 @@
                 "UNICODE",
                 "_UNICODE",
                 "STM32G474xx",
-                "USE_TIMEOUT=1"
+                "USE_TIMEOUT=1",
+                "USE_FULL_LL_DRIVER"
             ]
         }
     ],
