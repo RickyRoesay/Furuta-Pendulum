@@ -149,10 +149,23 @@ int main(void)
   //RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.HSEState = RCC_HSE_OFF;
 
+  /** As per TRM Section 7.4.4, 
+   *   - f(VCO_clock) = f(PLL_clock_input) * (PLLN / PLLM)
+   *   - f(PLL_x) = f(VCO_clock) / PLLx    (where x = P, Q and R)
+   * 
+   * As per STM32G474xx datasheet (DS12288 Rev 6) section 5.3.9, 
+   * the maximum PLL VCO frequency is 344MHz while in voltage scaling 
+   * range 1. 
+   * 
+   * The intended SYSCLK frequency is 170MHz, which is the maximum
+   * that this device can support.  HSI freq = 16MHz, 
+   * N = 85, M = 4, VCO = 340MHz, P, Q and R CLK's = 170MHz
+   * 
+   */
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLN = 85;
+  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV4;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI; //RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV2;
-  RCC_OscInitStruct.PLL.PLLN = 20;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
