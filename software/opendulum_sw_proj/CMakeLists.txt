@@ -33,6 +33,10 @@ set (MFPU_FPV5_D16                    "-mfpu=fpv5-d16")
 set (MFLOAT_ABI_SOFTWARE              "-mfloat-abi=soft")
 set (MFLOAT_ABI_HARDWARE              "-mfloat-abi=hard")
 set (MFLOAT_ABI_MIX                   "-mfloat-abi=softfp")
+set (RUNTIME_LIBRARY_REDUCED_C        "--specs=nano.specs")
+set (RUNTIME_LIBRARY_STD_C            "")
+set (RUNTIME_LIBRARY_SYSCALLS_MINIMAL "--specs=nosys.specs")
+set (RUNTIME_LIBRARY_SYSCALLS_NONE    "")
 #######################################################################
 
 #
@@ -56,7 +60,7 @@ set (STM32G4xx_HAL_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/STM32G4x
 set (PROJECT_SOURCES
 	# LIST SOURCE FILES HERE
 	source/vendor/startup_stm32g474ceux.s
-	source/main.c
+	source/main.cpp
 	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_adc_ex.c
 	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_adc.c
 	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_comp.c
@@ -188,5 +192,6 @@ include_directories (${PROJECT_INCLUDES})
 set (CMAKE_EXECUTABLE_SUFFIX ".elf")
 set (CMAKE_STATIC_LIBRARY_SUFFIX ".a")
 set (CMAKE_C_FLAGS "${MCPU} -std=gnu11 ${MFPU} ${MFLOAT_ABI}  -mthumb -Wall -Werror")
-set (CMAKE_EXE_LINKER_FLAGS "-T${LINKER_SCRIPT} -Wl,-Map=test.map -Wl,--gc-sections -static -Wl,--start-group -lc -lm -Wl,--end-group")
+set (CMAKE_CXX_FLAGS "${MCPU} ${MFPU} ${MFLOAT_ABI}  -mthumb -Wall -Werror")
+set (CMAKE_EXE_LINKER_FLAGS "-T${LINKER_SCRIPT} -Wl,-Map=test.map -Wl,--gc-sections -specs=nano.specs -specs=nosys.specs -static -Wl,--start-group -lc -lm -Wl,--end-group")
 set (CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS} -x assembler-with-cpp")

@@ -16,6 +16,7 @@
  ******************************************************************************
  */
 
+
 #include <stdint.h>
 #include <math.h>
 #include "stm32g4xx.h"
@@ -244,8 +245,7 @@ void LED_Blinking(uint32_t Period)
 /*   USER IRQ HANDLER TREATMENT                                               */
 /******************************************************************************/
 
-/** extern "C" */void SysTick_Handler(void)
+extern "C" void SysTick_Handler(void)
 {
   HAL_IncTick();
 }
-

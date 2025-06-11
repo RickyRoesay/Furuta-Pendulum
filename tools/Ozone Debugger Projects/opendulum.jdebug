@@ -22,8 +22,11 @@ void OnProjectLoad (void) {
   //
   // Dialog-generated settings
   //
+  File.Open ("C:/Users/Ross/Documents/GitHub/Furuta-Pendulum/software/opendulum_sw_proj/build/OPENDULUM_SW_PROJ.elf");
   Project.AddPathSubstitute ("C:/Users/Ross/Documents/GitHub/Furuta-Pendulum/tools/Ozone Debugger Projects", "$(ProjectDir)");
   Project.AddPathSubstitute ("c:/users/ross/documents/github/furuta-pendulum/tools/ozone debugger projects", "$(ProjectDir)");
+
+  Project.SetRootPath("c:/users/ross/documents/github/furuta-pendulum/software/opendulum_sw_proj/source");
   Project.SetDevice ("STM32G474CE");
   Project.SetHostIF ("USB", "801055939");
   Project.SetTargetIF ("SWD");
@@ -32,7 +35,6 @@ void OnProjectLoad (void) {
   //
   // User settings
   //
-  File.Open ("C:/Users/Ross/Documents/GitHub/Furuta-Pendulum/software/opendulum_sw_proj/build/OPENDULUM_SW_PROJ.elf");
 }
 
 /*********************************************************************

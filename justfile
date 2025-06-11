@@ -18,7 +18,7 @@ clean_command_string := if path_exists(build_folder_path) == "true" {
 }
 
 build:
-    cmake -DCMAKE_TOOLCHAIN_FILE="cubeide-gcc.cmake" -S ./ -B build -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=build
+    cmake -DCMAKE_TOOLCHAIN_FILE="opendulum.cmake" -S ./ -B build -G"Unix Makefiles" 
     make -C build VERBOSE=1 -j
 
 clean:

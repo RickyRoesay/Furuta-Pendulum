@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "C:/Users/Ross/Documents/GitHub/Furuta-Pendulum/software/opendulum_sw_proj"
+    "cmake.sourceDirectory": "C:/Users/Ross/Documents/GitHub/Furuta-Pendulum/software/opendulum_sw_proj",
+    "C_Cpp.default.compilerPath": "c:\\msys64\\mingw64\\bin\\arm-none-eabi-gcc.exe"
 }

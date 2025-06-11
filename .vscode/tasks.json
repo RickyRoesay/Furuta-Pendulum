@@ -1,0 +1,20 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build ARM Project with Make", // A descriptive name for your task
+            "type": "shell",
+            "command": "make", // Your make command. Adjust if you use a specific Makefile, e.g., "make -f Makefile.arm"
+            "args": [], // Any arguments for make, e.g., ["-f", "Makefile.arm", "all"]
+            "options": {
+                "cwd": "${workspaceFolder}/software/opendulum_sw_proj/" // Set the working directory to your project root
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true // Set this to true if you want this to be the default build task
+            },
+            "problemMatcher": "$gcc", // THIS IS THE CRUCIAL PART!
+            "detail": "Runs 'make' to build the ARM project and captures GCC warnings/errors."
+        }
+    ]
+}
