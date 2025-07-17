@@ -1,0 +1,37 @@
+This file is used to list what peripherals have been assigned to each
+class/software component.
+
+TIM2 -> OS_Tick, used mainly for polling wait delays. 
+TIM6 -> HAL 1ms tick
+
+SPI2 -> SSD1357 
+DMA1 CHx -> SPI2 TX DMA
+
+SPI1 -> AS5038A 
+DMA1 CHy -> SPI1 TX DMA
+DMA1 CHz -> SPI1 RX DMA
+
+
+///////////////////////////////////////////////////////////
+The AS5048 has different commands than the AS5047.  
+For now, lets just do a direct replacement of the IC with the AS5048A.
+
+AS5047_nCS -> PB2               GPIO config'd, not a slave select pin
+AS5047_CLK -> Aux1 A -> PA5     AF5, SPI1 SCLK
+AS5047_MISO -> Aux1 B -> PB4    AF5, SPI1 MISO
+AS5047_MOSI -> Aux1 C -> PA7    AF5, SPI1 MOSI
+
+
+///////////////////////////////////////////////////////////
+
+SSD1357__D#     -> Aux1 E -> PB3 & PB9
+SSD1357__nRST   -> Aux1 D -> PA15
+SSD1357__SCLK   -> Aux2 A -> PF1                       AF5, SPI2 SCLK
+SSD1357__MISO   -> Aux2 B -> PF0 & PA10 (PA10 used)    AF5, SPI2 MISO
+SSD1357__MOSI   -> Aux2 C -> PC4 & PA11 (PA11 used)    AF5, SPI2 MOSI
+SSD1357__nCS    -> Aux2 D -> PB7                       
+
+
+LED1 -> PB15
+LED2 -> PC6 
+

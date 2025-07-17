@@ -1,0 +1,587 @@
+
+#include "WS2812B_RGB_LED_Strip.hpp"
+#include "stm32g4xx_hal.h"
+#include "stm32g4xx.h"
+#include "system_stm32g4xx.h"
+#include "stm32g4xx_hal_dma.h"
+#include "foc_utils.h"
+
+
+/** The order of operations for this concurrent driver is as follows:
+ *      1). Write to pixel buffer, actually choosing what the next "frame" will be.
+ *      2). Process Bitfield array until status is "WS2812B_READY_TO_UPLOAD_BITSTREAM."
+ *      3). Trigger dma transfer using "write_bitfield_array_via_dma" function.
+ * 
+ * NOTE: This driver utilizes DMA2, Stream 1, Channel 7. This means we use
+ * TIM8 Update to trigger the dma bumps.
+ * 
+ * IMPORTANT: NOTE: DMA1 CAN NOT WRITE TO GPIO
+ * on the STM32F4!!!!  A helpful guide that goes into more detail can be found using 
+ * this link:  http://www.efton.sk/STM32/gotcha/g30.html
+ */
+
+
+/** NOTE: These values are for the STM32F4xx MCU and may differ for other variants.
+ * TRM:SECION: 2.3 Memory Map. */
+#define LOWEST_ADDRESS_OF_GPIO_RAM      0x40020000
+#define HIGHEST_ADDRESS_OF_GPIO_RAM     0x40022BFF
+
+
+/** By default, the timer is configured with prescaler and clock divider
+ * as 1 during class construction.  We only need to set the overflow to 51 counts
+ * to get the desired overflow frequency of around 300ns. 
+ * (300e-9 * 170000000 = 51)*/
+#define TMR_OVF_VAL_TO_GET_300NS_PRD_WITH_NO_CLKDIV_OR_PSC 51
+
+/** We are using DMA2, channel 1.  As per G4 TRM section 12.6.2, 
+ * the transfer complete flag has index of bit 1.  
+ * Transfer error flag = bit 3
+ * Half Transfer Complete flag = bit 2
+ * Transfer Complete flag = bit 1
+ * Global interrupt flag = bit 0 */
+#define DMA_CH1_TRANSFER_ERROR_FLAG_BIT_MASK 0x8UL
+#define DMA_CH1_TRANSFER_COMPLETE_FLAG_BIT_MASK 0x2UL
+
+/** As per G4 TRM Section 12.6.3, bit 3 and bit 1 
+ * are Transfer Error interrupt enable and Transfer 
+ * complete interrupt enable respectively
+ */
+#define DMA_CCRx_TRANSFER_COMPLETE_AND_ERROR_INT_EN_MASK 0xAUL
+
+
+
+#define BIT_LEVEL_HIGH 1
+#define BIT_LEVEL_LOW 0
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+WS2812B_RGB_LED_Strip::WS2812B_RGB_LED_Strip(GPIO_Pin * gpio_pin_class_ptr_param)
+{
+  gpio_pin_class_ptr = gpio_pin_class_ptr_param;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+
+WS2812B_Status_e WS2812B_RGB_LED_Strip::get_status(void)
+{
+  bool tmp_is_dma_transfer_in_progress = is_dma_transfer_in_progress();
+  switch(status)
+  {
+    case  WS2812B_INIT_PERIPHERALS:
+    case  WS2812B_INIT_FAIL:
+      // do nothing, keep status the same
+    break;
+    
+    case  WS2812B_TRANSMITTING_DATA:
+      if(tmp_is_dma_transfer_in_progress == true)
+      {
+        // do nothing, keep status the same
+      }
+      else
+      {
+        status = WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM;  
+      }
+    break; 
+
+    case  WS2812B_READY_TO_UPLOAD_BITSTREAM:   
+    case  WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM: 
+    {
+      if(tmp_is_dma_transfer_in_progress == true)
+      {
+        status = WS2812B_TRANSMITTING_DATA;
+      }
+      else
+      {
+        // do nothing
+      }
+    }
+    break;
+  }
+
+  return status;
+}
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+WS2812B_Status_e  WS2812B_RGB_LED_Strip::init_dma_and_timer_peripherals(uint8_t num_of_leds_to_cmd)
+{
+  if(num_of_leds_to_cmd > WS2812B_MAX_NUM_OF_LEDS
+  || verify_gpio_pin_configuration_and_get_dma_dest_ptr() == false)
+  {
+    status = WS2812B_INIT_FAIL;
+  }
+  else
+  {
+    HAL_StatusTypeDef tmp_hal_err_ret_val = HAL_OK;
+
+    active_led_num = num_of_leds_to_cmd;
+    
+    /** Timer 7 is used as the DMA trigger source. */
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM7);
+
+    timer_handle.Instance = TIM7;
+
+    /** We only need to set the overflow to 50 counts
+     * to get the desired overflow frequency of around 300ns. */
+    timer_handle.Init.Period = TMR_OVF_VAL_TO_GET_300NS_PRD_WITH_NO_CLKDIV_OR_PSC;
+    timer_handle.Init.Prescaler = 0;
+    timer_handle.Init.ClockDivision = 0;
+    timer_handle.Init.CounterMode = TIM_COUNTERMODE_UP;
+    timer_handle.Init.RepetitionCounter = 0;
+
+    tmp_hal_err_ret_val = HAL_TIM_Base_Init(&timer_handle);
+    
+    timer_handle.Instance->DIER = 1 << 8; // set UDE update DMA req enable bit HIGH
+    
+    tmp_hal_err_ret_val = (HAL_StatusTypeDef)(HAL_TIM_Base_Start(&timer_handle) | tmp_hal_err_ret_val);
+
+    __HAL_RCC_DMA2_CLK_ENABLE();
+
+    dma_handle.Instance = DMA2_Channel1;
+    dma_handle.DmaBaseAddress = DMA2;
+
+    dma_handle.Init.Request = DMA_REQUEST_TIM7_UP; // Trigger on TIM7 UP
+    dma_handle.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    dma_handle.Init.PeriphInc = DMA_PINC_DISABLE;
+    dma_handle.Init.MemInc = DMA_MINC_ENABLE;
+    
+    /** PSIZE and MSIZE */
+    dma_handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+    dma_handle.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+
+    dma_handle.Init.Mode = DMA_NORMAL;
+    dma_handle.Init.Priority = DMA_PRIORITY_VERY_HIGH;
+    
+    tmp_hal_err_ret_val = (HAL_StatusTypeDef)(HAL_DMA_Init(&dma_handle) | tmp_hal_err_ret_val);
+
+    /** Enable Transfer complete and transfer error flags */
+    dma_handle.Instance->CCR |= DMA_CCRx_TRANSFER_COMPLETE_AND_ERROR_INT_EN_MASK; 
+
+    has_dma_transfer_been_started = false;
+
+    /** mem source address is set right before enabling dma transfers in
+     * the "write_bitfield_array_via_dma" function. */
+    dma_handle.Instance->CPAR = gpio_dma_bsrr_address_as_u32;
+
+    write_reset_data_to_bitstream(WS2812B_BITSTREAM_0);
+    write_reset_data_to_bitstream(WS2812B_BITSTREAM_1);
+
+    if(tmp_hal_err_ret_val == HAL_OK)
+      status = WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM;
+    else
+      status = WS2812B_INIT_FAIL;
+  }
+  return status;
+}
+
+
+
+inline bool WS2812B_RGB_LED_Strip::is_dma_transfer_in_progress(void)
+{
+  bool tmp_ret_val;
+  
+  /** As per G4 TRM section 12.6.3, the enable bit 
+   * of the DMA_CCRx register is only cleared by hardware if 
+   * an error occurs in the transmission.  This is different 
+   * from the F4, where with the F4 the enable bit is cleared 
+   * by hardware when the transmission is finished. */
+  #if 0
+  return (dma_handle.Instance->CCR & 0x00000001); // old method that only works on F4
+  #endif
+
+  if(has_dma_transfer_been_started == false)
+  {
+    tmp_ret_val = false;
+  }
+  else
+  {
+    if(dma_handle.DmaBaseAddress->ISR & DMA_CH1_TRANSFER_ERROR_FLAG_BIT_MASK)
+    {
+      tmp_ret_val = false;
+      has_dma_transfer_been_started = false;
+      dma_handle.Instance->CCR &= ~0x00000001;
+      dma_handle.DmaBaseAddress->IFCR = 0xFUL;
+    }
+    else if(dma_handle.DmaBaseAddress->ISR & DMA_CH1_TRANSFER_COMPLETE_FLAG_BIT_MASK)
+    {
+      tmp_ret_val = false;
+
+      /** For now, don't allow recovery from failed DMA transmissions.
+       * That way, we will know if there are any DMA failures in 
+       * the beginning of testing. */
+      #if 0
+      has_dma_transfer_been_started = false;
+      dma_handle.Instance->CCR &= ~0x00000001;
+      dma_handle.DmaBaseAddress->IFCR = 0xFUL;
+      #endif
+    }
+    else
+    {
+      tmp_ret_val = true;
+      
+      // do nothing, keep "has_dma_transfer_been_started" TRUE;
+    }
+  }
+  return tmp_ret_val;
+}
+
+
+
+
+bool WS2812B_RGB_LED_Strip::modify_pixel_buffer_single(uint8_t buffer_idx, 
+                                                  uint8_t red, uint8_t green, uint8_t blue)
+{
+  if(buffer_idx >= active_led_num)
+    return 0;
+
+  led_pixel_buf[buffer_idx].red = red;
+  led_pixel_buf[buffer_idx].green = green;
+  led_pixel_buf[buffer_idx].blue = blue;
+  
+  buffer_idx++;
+
+  /** Reset to 0 signaling the buffer has been updated since the last time 
+   * any WS2812B driver functions have been called. */
+  next_led_buf_idx_to_process = 0;
+  status = WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM;
+
+  return 1;
+}
+bool WS2812B_RGB_LED_Strip::modify_pixel_buffer_single(uint8_t buffer_idx, 
+                                                    float hue_degrees, uint8_t value)
+{
+  if(buffer_idx >= active_led_num \
+  || hue_degrees > 360.0f \
+  || hue_degrees < 0.0f)
+    return 0;
+
+  WS2812B_Led_Pixel_Colors_s pixel_colors = hue_value_to_rgb(hue_degrees, value);
+
+  led_pixel_buf[buffer_idx].red = pixel_colors.red;
+  led_pixel_buf[buffer_idx].green = pixel_colors.green;
+  led_pixel_buf[buffer_idx].blue = pixel_colors.blue;
+  
+  buffer_idx++;
+
+  /** Reset to 0 signaling the buffer has been updated since the last time 
+   * any WS2812B driver functions have been called. */
+  next_led_buf_idx_to_process = 0;
+  status = WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM;
+
+  return 1;
+}
+
+
+
+
+/** This function takes ~1.3us for 9 led's */
+void WS2812B_RGB_LED_Strip::modify_pixel_buffer_all_leds(uint8_t red, uint8_t green, uint8_t blue)
+{
+  for(uint8_t tmp_pixel_buf_idx = 0; tmp_pixel_buf_idx < active_led_num; tmp_pixel_buf_idx++)
+  {
+    led_pixel_buf[tmp_pixel_buf_idx].red = red;
+    led_pixel_buf[tmp_pixel_buf_idx].green = green;
+    led_pixel_buf[tmp_pixel_buf_idx].blue = blue;
+  }
+  
+  /** Reset to 0 signaling the buffer has been updated since the last time 
+   * any WS2812B driver functions have been called. */
+  next_led_buf_idx_to_process = 0;
+  status = WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM;
+}
+void WS2812B_RGB_LED_Strip::modify_pixel_buffer_all_leds(float hue_degrees, uint8_t value)
+{
+  WS2812B_Led_Pixel_Colors_s pixel_colors = hue_value_to_rgb(hue_degrees, value);
+
+  for(uint8_t tmp_pixel_buf_idx = 0; tmp_pixel_buf_idx < active_led_num; tmp_pixel_buf_idx++)
+  {
+    led_pixel_buf[tmp_pixel_buf_idx].red = pixel_colors.red;
+    led_pixel_buf[tmp_pixel_buf_idx].green = pixel_colors.green;
+    led_pixel_buf[tmp_pixel_buf_idx].blue = pixel_colors.blue;
+  }
+  
+  /** Reset to 0 signaling the buffer has been updated since the last time 
+   * any WS2812B driver functions have been called. */
+  next_led_buf_idx_to_process = 0;
+  status = WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM;
+}
+
+
+
+
+bool WS2812B_RGB_LED_Strip::update_num_of_leds_to_cmd(uint8_t num_of_leds_to_cmd)
+{
+  bool tmp_ret_val;
+
+  if(num_of_leds_to_cmd <= WS2812B_MAX_NUM_OF_LEDS)
+  {
+    active_led_num = num_of_leds_to_cmd; 
+    next_led_buf_idx_to_process = 0; //reset value
+    tmp_ret_val = true;
+  }
+  else
+    tmp_ret_val = false;
+
+  return tmp_ret_val;
+}
+
+
+
+
+/** This function takes ~4.4us */
+WS2812B_Status_e  WS2812B_RGB_LED_Strip::process_bitfield_array(uint32_t num_of_pixels_to_process)
+{
+  uint32_t tmp_num_of_pixels_written_to = 0;
+
+  uint32_t tmp_bitfield_idx_offset = WS2812B_NUM_OF_BITS_PER_RESET 
+                                    + (WS2812B_NUM_OF_GPIO_WRITES_PER_PIXEL * next_led_buf_idx_to_process);
+
+  if(status == WS2812B_INIT_FAIL
+  || status == WS2812B_INIT_PERIPHERALS)
+    return status;
+    
+  while(tmp_num_of_pixels_written_to < num_of_pixels_to_process
+  && next_led_buf_idx_to_process < active_led_num)
+  {
+    write_pixel_data_to_bitstream(&bitstream[bitstream_idx_for_led_buf][tmp_bitfield_idx_offset], 
+                                  &led_pixel_buf[next_led_buf_idx_to_process]);
+    
+    tmp_bitfield_idx_offset += WS2812B_NUM_OF_GPIO_WRITES_PER_PIXEL;
+    tmp_num_of_pixels_written_to++;
+    next_led_buf_idx_to_process++;
+  }
+
+  if(is_dma_transfer_in_progress() == true)
+    status = WS2812B_TRANSMITTING_DATA;
+  else if(next_led_buf_idx_to_process >= active_led_num)
+    status = WS2812B_READY_TO_UPLOAD_BITSTREAM;
+  else
+    status = WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM;
+  
+  return status;
+}
+
+
+
+
+
+WS2812B_Status_e WS2812B_RGB_LED_Strip::write_bitfield_array_via_dma(void)
+{
+  switch(status)
+  {
+    case  WS2812B_INIT_PERIPHERALS:
+    case  WS2812B_INIT_FAIL:
+      // do nothing
+    break;
+    
+    case  WS2812B_TRANSMITTING_DATA:
+    case  WS2812B_READY_TO_UPLOAD_BITSTREAM:   
+    case  WS2812B_WAITING_TO_PROCESS_PIXEL_BITSTREAM: 
+    {
+      if(is_dma_transfer_in_progress() == false)
+      {
+        uint8_t tmp_bitstream_swap_space = bitstream_idx_for_led_buf;
+        bitstream_idx_for_led_buf = bitstream_idx_for_dma;
+        bitstream_idx_for_dma = tmp_bitstream_swap_space;
+        
+        /** Reset to 0 signaling the buffer has been updated since the last time 
+        * any WS2812B driver functions have been called. */
+        next_led_buf_idx_to_process = 0;
+        
+        /** DMA stream interrupts flags must be cleared before enabling DMA, but 
+         * they are cleared in the "is_dma_transfer_in_progress" function */
+        
+        dma_handle.Instance->CNDTR = WS2812B_NUM_OF_GPIO_WRITES_TOTAL;
+        dma_handle.Instance->CMAR = (uint32_t)bitstream[bitstream_idx_for_dma];
+        __HAL_DMA_ENABLE(&dma_handle);
+      }
+      else
+      {
+        // do nothing
+      }
+
+      status = WS2812B_TRANSMITTING_DATA;
+    }
+    break;
+  }
+
+  return status;
+}
+
+
+
+void WS2812B_RGB_LED_Strip::set_gpio_pin_level(bool pin_level)
+{
+  if(pin_level == true)
+    gpio_pin_class_ptr->set_pin_level_high();
+  else
+    gpio_pin_class_ptr->set_pin_level_low();
+}
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////// PRIVATE: FUNCTIONS: //////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+
+
+inline void WS2812B_RGB_LED_Strip::write_reset_data_to_bitstream(WS2812B_Bitstream_Index_e bitstream_number)
+{
+  if(bitstream_number != WS2812B_BITSTREAM_0 && bitstream_number != WS2812B_BITSTREAM_1)
+    return;
+  
+  for(uint32_t tmp_idx = 0; tmp_idx < WS2812B_NUM_OF_BITS_PER_RESET; tmp_idx++)
+  {
+    bitstream[bitstream_number][tmp_idx] = gpio_dma_pin_clear_mask;
+  }
+}
+
+
+
+
+inline void WS2812B_RGB_LED_Strip::write_bit_data_to_bitstream(uint32_t *ptr_to_bitstream, uint8_t bit_level)
+{
+  switch(bit_level)
+  {
+    case BIT_LEVEL_LOW:
+      ptr_to_bitstream[0] = gpio_dma_pin_set_mask;
+      ptr_to_bitstream[1] = gpio_dma_pin_clear_mask;
+      ptr_to_bitstream[2] = gpio_dma_pin_clear_mask;
+      ptr_to_bitstream[3] = gpio_dma_pin_clear_mask;
+    break;
+    
+    default:
+    case BIT_LEVEL_HIGH:
+      ptr_to_bitstream[0] = gpio_dma_pin_set_mask;
+      ptr_to_bitstream[1] = gpio_dma_pin_set_mask;
+      ptr_to_bitstream[2] = gpio_dma_pin_set_mask;
+      ptr_to_bitstream[3] = gpio_dma_pin_clear_mask;
+    break;
+  }
+}
+
+
+
+
+inline void WS2812B_RGB_LED_Strip::write_pixel_data_to_bitstream(uint32_t *ptr_to_bitstream, 
+                                                                WS2812B_Led_Pixel_Colors_s * ptr_to_pixel_info)
+{
+  static const uint8_t tmp_bitfield_mask = 0x01;  
+  uint8_t tmp_bit_level;
+  uint32_t tmp_ptr_to_bitstream_offset = 0;
+  
+  uint8_t tmp_pixel_shift_reg = ptr_to_pixel_info->green;
+  
+  for(uint8_t tmp_bitshft_idx = 8; tmp_bitshft_idx > 0; tmp_bitshft_idx--)
+  {
+    tmp_bit_level = tmp_bitfield_mask & (tmp_pixel_shift_reg >> (tmp_bitshft_idx - 1));
+    write_bit_data_to_bitstream(&ptr_to_bitstream[tmp_ptr_to_bitstream_offset], tmp_bit_level);
+    tmp_ptr_to_bitstream_offset += 4;
+  }
+  
+  tmp_pixel_shift_reg = ptr_to_pixel_info->red;
+  
+  for(uint8_t tmp_bitshft_idx = 8; tmp_bitshft_idx > 0; tmp_bitshft_idx--)
+  {
+    tmp_bit_level = tmp_bitfield_mask & (tmp_pixel_shift_reg >> (tmp_bitshft_idx - 1));
+    write_bit_data_to_bitstream(&ptr_to_bitstream[tmp_ptr_to_bitstream_offset], tmp_bit_level);
+    tmp_ptr_to_bitstream_offset += 4;
+  }
+  
+  tmp_pixel_shift_reg = ptr_to_pixel_info->blue;
+  
+  for(uint8_t tmp_bitshft_idx = 8; tmp_bitshft_idx > 0; tmp_bitshft_idx--)
+  {
+    tmp_bit_level = tmp_bitfield_mask & (tmp_pixel_shift_reg >> (tmp_bitshft_idx - 1));
+    write_bit_data_to_bitstream(&ptr_to_bitstream[tmp_ptr_to_bitstream_offset], tmp_bit_level);
+    tmp_ptr_to_bitstream_offset += 4;
+  }
+}
+
+
+
+
+
+bool WS2812B_RGB_LED_Strip::verify_gpio_pin_configuration_and_get_dma_dest_ptr(void)
+{
+  bool tmp_ret_val;
+
+  if(gpio_pin_class_ptr->get_init_status() != HAL_OK)
+  {
+    tmp_ret_val = false;
+  }
+  else
+  {
+    gpio_dma_bsrr_address_as_u32 = (uint32_t)gpio_pin_class_ptr->get_bsrr_address();
+    gpio_dma_pin_set_mask = gpio_pin_class_ptr->get_pin_set_bitfield();
+    gpio_dma_pin_clear_mask = gpio_pin_class_ptr->get_pin_reset_bitfield();
+
+    if(gpio_dma_bsrr_address_as_u32 == NULL
+    || gpio_dma_pin_set_mask == 0UL
+    || gpio_dma_pin_clear_mask == 0UL
+    || gpio_dma_bsrr_address_as_u32 < LOWEST_ADDRESS_OF_GPIO_RAM
+    || gpio_dma_bsrr_address_as_u32 > HIGHEST_ADDRESS_OF_GPIO_RAM)
+    {
+      tmp_ret_val = false;
+    }
+    else
+      tmp_ret_val = true;
+  }
+
+  return tmp_ret_val;
+}
+
+
+/** A helpful guide to the use of HSV with RGB LED's can be found here:
+ * https://www.instructables.com/How-to-Make-Proper-Rainbow-and-Random-Colors-With-/
+ * 
+ * This is an implementation of what that author calls a sine wave rainbow. */
+inline WS2812B_Led_Pixel_Colors_s WS2812B_RGB_LED_Strip::hue_value_to_rgb(float hue_degrees, uint8_t value)
+{
+  WS2812B_Led_Pixel_Colors_s return_pixel_colors;
+  float value_f32 = (float)value;
+  float hue_radians = hue_degrees / 360.0f * _2PI;
+  
+  if(hue_radians >= _2PI || hue_radians < 0.0f)
+  {
+    return_pixel_colors.blue = 0;
+    return_pixel_colors.red = 0;
+    return_pixel_colors.green = 0;
+  }
+  else if(hue_radians < _120_D2R) // < 120 degrees
+  {
+    return_pixel_colors.blue = 0;
+    return_pixel_colors.green = (uint8_t)(value_f32 * _sin(hue_radians * 0.75f));
+    return_pixel_colors.red = (uint8_t)(value_f32 * _cos(hue_radians * 0.75f));
+  }
+  else if(hue_radians < (2.0f * _120_D2R)) // <240 degrees
+  {
+    hue_radians -= _120_D2R;
+    return_pixel_colors.red = 0;
+    return_pixel_colors.blue = (uint8_t)(value_f32 * _sin(hue_radians * 0.75f));
+    return_pixel_colors.green = (uint8_t)(value_f32 * _cos(hue_radians * 0.75f));
+  }
+  else // >=240 degrees
+  {
+    hue_radians -= 2.0f * _120_D2R;
+    return_pixel_colors.green = 0;
+    return_pixel_colors.red = (uint8_t)(value_f32 * _sin(hue_radians * 0.75f));
+    return_pixel_colors.blue = (uint8_t)(value_f32 * _cos(hue_radians * 0.75f));
+  }
+
+  return return_pixel_colors;
+}
+
+
+
+

@@ -31,6 +31,8 @@
 extern "C" {
 #endif
 
+#include "stm32_assert.h"
+
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
@@ -360,6 +362,7 @@ The real value may vary depending on the variations in voltage and temperature.*
 #include "stm32g4xx_hal_wwdg.h"
 #endif /* HAL_WWDG_MODULE_ENABLED */
 
+#if 0
 /* Exported macro ------------------------------------------------------------*/
 #ifdef  USE_FULL_ASSERT
 /**
@@ -376,6 +379,7 @@ void assert_failed(uint8_t *file, uint32_t line);
 #else
 #define assert_param(expr) ((void)0U)
 #endif /* USE_FULL_ASSERT */
+#endif
 
 #ifdef __cplusplus
 }

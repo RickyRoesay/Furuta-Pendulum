@@ -60,6 +60,8 @@ set (STM32G4xx_HAL_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/STM32G4x
 set (PROJECT_SOURCES
 	# LIST SOURCE FILES HERE
 	source/vendor/startup_stm32g474ceux.s
+	source/vendor/foc_utils.cpp
+	source/vendor/cmsis_device_g4/Source/Templates/system_stm32g4xx.c
 	source/main.cpp
 	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_adc_ex.c
 	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_adc.c
@@ -148,8 +150,6 @@ set (PROJECT_SOURCES
 	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_usart.c
 	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_usb.c
 	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_ll_utils.c
-	
-	source/vendor/cmsis_device_g4/Source/Templates/system_stm32g4xx.c
 	)
 
 
