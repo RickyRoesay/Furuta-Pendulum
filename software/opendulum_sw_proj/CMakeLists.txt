@@ -60,9 +60,12 @@ set (STM32G4xx_HAL_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/STM32G4x
 set (PROJECT_SOURCES
 	# LIST SOURCE FILES HERE
 	source/vendor/startup_stm32g474ceux.s
-	source/vendor/foc_utils.cpp
 	source/vendor/cmsis_device_g4/Source/Templates/system_stm32g4xx.c
 	source/main.cpp
+	source/GPIO/pins.cpp
+	source/simple_foc_utils/simple_foc_utils.cpp
+	source/WS2812B_RGB_LED_Strip/WS2812B_RGB_LED_Strip.cpp
+	
 	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_adc_ex.c
 	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_adc.c
 	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_comp.c
@@ -163,11 +166,15 @@ set (PROJECT_DEFINES
 
 set (PROJECT_INCLUDES
 	# LIST INCLUDE DIRECTORIES HERE
-	${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/cmsis_device_g4/Include/
-	${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/cmsis_core/
-	${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/
-	${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/STM32G4xx_HAL_Driver/
-	${CMAKE_CURRENT_SOURCE_DIR}/source/vendor/STM32G4xx_HAL_Driver/Inc/
+	source/vendor/cmsis_device_g4/Include/
+	source/vendor/cmsis_core/
+	source/vendor/
+	source/
+	source/GPIO/
+	source/simple_foc_utils/
+	source/WS2812B_RGB_LED_Strip/
+	source/vendor/STM32G4xx_HAL_Driver/
+	source/vendor/STM32G4xx_HAL_Driver/Inc/
     )
 
 

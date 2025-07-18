@@ -80,7 +80,13 @@ class GPIO_Pin
 {
   public:
 
-    GPIO_Pin(GPIO_TypeDef * gpio_periph_instance, LL_GPIO_InitTypeDef * gpio_init_struct)
+    GPIO_Pin() 
+    {
+      init_status = HAL_ERROR; 
+      set_bitmasks_and_pointers_to_default();
+    }
+
+    HAL_StatusTypeDef config_pin(GPIO_TypeDef * gpio_periph_instance, LL_GPIO_InitTypeDef * gpio_init_struct)
     {
       if(IS_GPIO_ALL_INSTANCE(gpio_periph_instance) 
       && IS_GPIO_INIT_PARAM_STRUCT_IN_SRAM1((uint32_t)gpio_init_struct))
@@ -179,6 +185,8 @@ class GPIO_Pin
         && IS_LL_GPIO_SPEED(gpio_init_struct->Speed)
         && IS_LL_GPIO_OUTPUT_TYPE(gpio_init_struct->OutputType))
         {
+          LL_GPIO_ResetOutputPin(gpio_port_ptr, gpio_init_struct->Pin);
+          
           init_status = (HAL_StatusTypeDef)LL_GPIO_Init(gpio_port_ptr, gpio_init_struct);
           if(init_status == HAL_OK)
           {
@@ -208,6 +216,7 @@ class GPIO_Pin
 
         init_status = HAL_ERROR;
       }
+      return init_status;
     }
 
     inline HAL_StatusTypeDef get_init_status(void)
@@ -232,7 +241,7 @@ class GPIO_Pin
 
     inline void set_pin_level(bool pin_level)
     {
-      switch(pin_level)
+      switch((uint8_t)pin_level)
       {
         case 1:
           set_pin_level_high();
@@ -291,25 +300,5 @@ class GPIO_Pin
       gpio_pin_clear_bsrr_mask = 0UL;
     }
 };
-
-
-
-
-
-static void MX_GPIO_Init(void)
-{
-  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-  LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_3);
-
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_3;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_1;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-  //LL_GPIO_SetOutputPin
-}
 
 

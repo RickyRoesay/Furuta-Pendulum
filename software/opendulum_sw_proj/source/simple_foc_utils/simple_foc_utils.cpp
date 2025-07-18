@@ -12,7 +12,7 @@
 * 
 *******************************************************************************/
 
-#include "foc_utils.h"
+#include "simple_foc_utils.h"
 #include "stdint.h"
 #include "math.h"
 #include "limits.h"

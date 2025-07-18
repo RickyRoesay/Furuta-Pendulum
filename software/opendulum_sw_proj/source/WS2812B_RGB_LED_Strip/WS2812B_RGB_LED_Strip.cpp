@@ -4,7 +4,7 @@
 #include "stm32g4xx.h"
 #include "system_stm32g4xx.h"
 #include "stm32g4xx_hal_dma.h"
-#include "foc_utils.h"
+#include "simple_foc_utils.h"
 
 
 /** The order of operations for this concurrent driver is as follows:
@@ -111,6 +111,7 @@ WS2812B_Status_e WS2812B_RGB_LED_Strip::get_status(void)
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
+/** NOTE: this function must be called AFTER the gpio pin has been configured! */
 WS2812B_Status_e  WS2812B_RGB_LED_Strip::init_dma_and_timer_peripherals(uint8_t num_of_leds_to_cmd)
 {
   if(num_of_leds_to_cmd > WS2812B_MAX_NUM_OF_LEDS
@@ -526,8 +527,7 @@ bool WS2812B_RGB_LED_Strip::verify_gpio_pin_configuration_and_get_dma_dest_ptr(v
     gpio_dma_pin_set_mask = gpio_pin_class_ptr->get_pin_set_bitfield();
     gpio_dma_pin_clear_mask = gpio_pin_class_ptr->get_pin_reset_bitfield();
 
-    if(gpio_dma_bsrr_address_as_u32 == NULL
-    || gpio_dma_pin_set_mask == 0UL
+    if(gpio_dma_pin_set_mask == 0UL
     || gpio_dma_pin_clear_mask == 0UL
     || gpio_dma_bsrr_address_as_u32 < LOWEST_ADDRESS_OF_GPIO_RAM
     || gpio_dma_bsrr_address_as_u32 > HIGHEST_ADDRESS_OF_GPIO_RAM)

@@ -21,11 +21,19 @@
 #include "stm32g4xx_ll_gpio.h"
 #include "stm32g4xx_hal_rcc.h"
 
+#include "pins.hpp"
+#include "WS2812B_RGB_LED_Strip.hpp"
+#include "OS_Tick.hpp"
+
+
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
 #endif
 
 
+WS2812B_RGB_LED_Strip rbg_led_strip_drv = WS2812B_RGB_LED_Strip(&gpio_led_data_out);
+
+OS_Tick os_tick = OS_Tick(TIM2);
 
 __IO uint8_t startup_status = 0;
 
@@ -137,13 +145,27 @@ int main(void)
     startup_status |= HAL_ERROR;
   }
 
+  pins_configure_gpio();
 
-  //MX_GPIO_Init();
+  rbg_led_strip_drv.set_gpio_pin_level(1);
+  rbg_led_strip_drv.set_gpio_pin_level(0);
 
+  rbg_led_strip_drv.init_dma_and_timer_peripherals(20);
+
+  rbg_led_strip_drv.modify_pixel_buffer_all_leds(66.0f, 20);
+  rbg_led_strip_drv.process_bitfield_array(20);
+  rbg_led_strip_drv.write_bitfield_array_via_dma();
+
+  (void)os_tick.configure_os_tick_timer();
 
   while (1)
   {
-
+    gpio_led1.set_pin_level_high();
+    gpio_led2.set_pin_level_high();
+    os_tick.wait_us(1000000);
+    gpio_led1.set_pin_level_low();
+    gpio_led2.set_pin_level_low();
+    os_tick.wait_us(1000000);
   }
 }
 

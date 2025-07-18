@@ -21,7 +21,7 @@
  * is to intentionally have the OS_Tick class use the wrong speed
  * for calculating task periodicities.  We would do this intentionally
  * so that it is very obvious if either the external crystal resonator
- * circuit, or the PLL never stabilized.  */
+ * circuit or the PLL never stabilized.  */
 #define OS_TICK__USE_STATIC_FREQUENCY_FOR_SYSCLK_CONVERSIONS
 
 #ifdef OS_TICK__USE_STATIC_FREQUENCY_FOR_SYSCLK_CONVERSIONS
@@ -58,12 +58,15 @@ class OS_Tick
     OS_Tick(TIM_TypeDef * tim_periph_instance_to_use_as_tick)
     {
       timer_hal_handle.Instance = tim_periph_instance_to_use_as_tick;
+    }
 
-      if(IS_OS_TICK_TIM_PERIPH_VALID(tim_periph_instance_to_use_as_tick))
+    bool configure_os_tick_timer(void)
+    {
+      if(IS_OS_TICK_TIM_PERIPH_VALID(timer_hal_handle.Instance))
       {
         HAL_StatusTypeDef tmp_hal_err_ret_val;
 
-        if(IS_OS_TICK_TIM_PERIPH_TIM2(tim_periph_instance_to_use_as_tick))
+        if(IS_OS_TICK_TIM_PERIPH_TIM2(timer_hal_handle.Instance))
           LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM2);
         else
           LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM5);
@@ -98,6 +101,7 @@ class OS_Tick
         polling_timer_status = OS_TICK_POLLING_TIMER_INIT;
         was_initialization_successful = false;
       }
+      return was_initialization_successful;
     }
 
 
@@ -109,7 +113,7 @@ class OS_Tick
 
 
 
-    inline uint32_t wait_us(uint32_t wait_time_in_us)
+    inline void wait_us(uint32_t wait_time_in_us)
     {
       uint32_t tmp_ticks_to_wait_for = wait_time_in_us * (OS_TICK_SYSCLK_FREQ / 1000000);
       uint32_t tmp_start_tick = get_counter_val();
@@ -162,6 +166,8 @@ class OS_Tick
     bool was_initialization_successful;
 
 };
+
+
 
 
 

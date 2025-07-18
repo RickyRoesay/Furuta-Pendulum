@@ -13,8 +13,8 @@
  *******************************************************************************/
 
 
-#ifndef FOCUTILS_LIB_H
-#define FOCUTILS_LIB_H
+#ifndef SIMPLE_FOCUTILS_LIB_H
+#define SIMPLE_FOCUTILS_LIB_H
 
 // sign function
 #define _sign(a) ( ( (a) < 0 )  ?  -1   : ( (a) > 0 ) )

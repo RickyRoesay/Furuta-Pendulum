@@ -24,7 +24,7 @@ AS5047_MOSI -> Aux1 C -> PA7    AF5, SPI1 MOSI
 
 ///////////////////////////////////////////////////////////
 
-SSD1357__D#     -> Aux1 E -> PB3 & PB9
+SSD1357__D# OR LED_Data_out     -> Aux1 E -> PB3 & PB9
 SSD1357__nRST   -> Aux1 D -> PA15
 SSD1357__SCLK   -> Aux2 A -> PF1                       AF5, SPI2 SCLK
 SSD1357__MISO   -> Aux2 B -> PF0 & PA10 (PA10 used)    AF5, SPI2 MISO
