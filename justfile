@@ -1,12 +1,10 @@
 alias b := build
 alias c := clean
+alias i := install
+alias u := uninstall
 
+set working-directory := './software/opendulum_sw_proj'
 
-#  GIT SUBMODULE CMD MESSAGES (entered from repository root directory)
-#  git submodule add -b "master" 'https://github.com/STMicroelectronics/stm32g4xx_hal_driver.git' 'software/opendulum_sw_proj/source/vendor/STM32G4xx_HAL_Driver'
-#  git submodule add -b "master" 'https://github.com/STMicroelectronics/cmsis_device_g4.git' 'software/opendulum_sw_proj/source/vendor/cmsis_device_g4'
-
-set working-directory := '/Users/Ross/Documents/GitHub/Furuta-Pendulum/software/opendulum_sw_proj'
 set shell := ["powershell.exe", "/c"]
 
 build_folder_path := absolute_path('build')
@@ -23,4 +21,12 @@ build:
 
 clean:
     {{clean_command_string}}
+
+install:
+    git submodule add -f -b "master" 'https://github.com/STMicroelectronics/stm32g4xx_hal_driver.git' './source/vendor/STM32G4xx_HAL_Driver' 
+    git submodule add -f -b "master" 'https://github.com/STMicroelectronics/cmsis_device_g4.git' './source/vendor/cmsis_device_g4' 
+
+uninstall:
+    git rm './source/vendor/STM32G4xx_HAL_Driver' -f
+    git rm './source/vendor/cmsis_device_g4' -f
 

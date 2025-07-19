@@ -1,24 +1,26 @@
 
 
-OpenDocument="stm32g4xx_hal.c", FilePath="C:/Users/Ross/Documents/GitHub/Furuta-Pendulum/software/opendulum_sw_proj/source/vendor/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal.c", Line=308
-OpenDocument="main.cpp", FilePath="C:/Users/Ross/Documents/GitHub/Furuta-Pendulum/software/opendulum_sw_proj/source/main.cpp", Line=197
-OpenDocument="opendulum.jdebug", FilePath="C:/Users/Ross/Documents/GitHub/Furuta-Pendulum/tools/Ozone Debugger Projects/opendulum.jdebug", Line=0
+
+Breakpoint=C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/opendulum_sw_proj/source/GPIO/GPIO_Pin.hpp:92:23, State=BP_STATE_DISABLED
+Breakpoint=C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/opendulum_sw_proj/source/main.cpp:148, State=BP_STATE_ON
+OpenDocument="GPIO_Pin.hpp", FilePath="C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/opendulum_sw_proj/source/GPIO/GPIO_Pin.hpp", Line=100
+OpenDocument="pins.cpp", FilePath="C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/opendulum_sw_proj/source/GPIO/pins.cpp", Line=0
+OpenDocument="startup_stm32g474ceux.s", FilePath="C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/opendulum_sw_proj/source/vendor/startup_stm32g474ceux.s", Line=41
+OpenDocument="main.cpp", FilePath="C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/opendulum_sw_proj/source/main.cpp", Line=120
 OpenToolbar="Debug", Floating=0, x=0, y=0
-OpenWindow="Registers 1", DockArea=RIGHT, x=0, y=1, w=822, h=679, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, FilteredItems=[], RefreshRate=1
-OpenWindow="Source Files", DockArea=LEFT, x=0, y=1, w=780, h=246, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=822, h=404, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Memory 1", DockArea=BOTTOM, x=1, y=0, w=1277, h=331, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, EditorAddress=0x0
-OpenWindow="Watched Data 1", DockArea=LEFT, x=0, y=0, w=780, h=249, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Functions", DockArea=LEFT, x=0, y=3, w=780, h=352, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Code Profile", DockArea=LEFT, x=0, y=2, w=780, h=234, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, GroupByFiles=0, SortRespectsFilters=0, ParentRelativeLoad=0
-OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=1282, h=331, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Registers 1", DockArea=RIGHT, x=0, y=1, w=471, h=598, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, FilteredItems=[], RefreshRate=1
+OpenWindow="Source Files", DockArea=LEFT, x=0, y=1, w=1310, h=154, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=471, h=380, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Memory 1", DockArea=BOTTOM, x=1, y=0, w=1272, h=331, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, EditorAddress=0x200000E8
+OpenWindow="Watched Data 1", DockArea=LEFT, x=0, y=0, w=1310, h=824, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=1287, h=331, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 SmartViewPlugin="", Page="", Toolbar="Hidden", Window="SmartView 1"
-TableHeader="Functions", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Address";"Size";"#Insts";"Class";"Source"], ColWidths=[437;104;100;100;0;311]
-TableHeader="Source Files", SortCol="File", SortOrder="ASCENDING", VisibleCols=["File";"Status";"Size";"#Insts";"Path"], ColWidths=[174;100;100;100;1283]
-TableHeader="Code Profile", SortCol="File / Function", SortOrder="ASCENDING", VisibleCols=["File / Function";"Source Coverage";"Inst. Coverage";"Run Count";"Fetch Count";"Load"], ColWidths=[486;157;174;113;122;104]
+TableHeader="Source Files", SortCol="File", SortOrder="ASCENDING", VisibleCols=["File";"Status";"Size";"#Insts";"Path"], ColWidths=[174;100;100;100;902]
 TableHeader="Power Sampling", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";"Ch 0"], ColWidths=[100;100;100]
-TableHeader="Registers 1", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Description"], ColWidths=[196;144;456]
+TableHeader="Registers 1", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Description"], ColWidths=[196;144;254]
+TableHeader="Watched Data 1", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Value";"Location";"Refresh";"Access"], ColWidths=[740;100;104;164;185]
 TableHeader="RegisterSelectionDialog", SortCol="None", SortOrder="ASCENDING", VisibleCols=[], ColWidths=[]
-TableHeader="TargetExceptionDialog", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Address";"Description"], ColWidths=[27;27;27;45]
-TableHeader="Watched Data 1", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Value";"Location";"Refresh";"Access"], ColWidths=[100;100;104;100;376]
+TableHeader="TargetExceptionDialog", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Address";"Description"], ColWidths=[26;26;26;31]
 WatchedExpression="uwTick", Window=Watched Data 1
+WatchedExpression="startup_status", Window=Watched Data 1
+WatchedExpression="rbg_led_strip_drv", Window=Watched Data 1

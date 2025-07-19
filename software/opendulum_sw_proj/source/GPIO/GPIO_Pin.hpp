@@ -16,8 +16,8 @@
  * pointer value for "gpio_port_ptr" is dereferenced, preventing the MCU from crashing.*/
 #define DEFAULT_GPIO_BASE         GPIOA
 
-#define IS_GPIO_INIT_PARAM_STRUCT_IN_SRAM1(INSTANCE)        (((INSTANCE) >= SRAM1_BASE) && \
-                                                            ((INSTANCE) <= (SRAM1_BASE + SRAM1_SIZE_MAX)))
+#define IS_GPIO_INIT_PARAM_STRUCT_IN_SRAM(INSTANCE)        (((INSTANCE) >= SRAM1_BASE) && \
+                                                            ((INSTANCE) <= (SRAM1_BASE + SRAM1_SIZE_MAX + SRAM2_SIZE + CCMSRAM_SIZE)))
 //
 
 
@@ -89,7 +89,7 @@ class GPIO_Pin
     HAL_StatusTypeDef config_pin(GPIO_TypeDef * gpio_periph_instance, LL_GPIO_InitTypeDef * gpio_init_struct)
     {
       if(IS_GPIO_ALL_INSTANCE(gpio_periph_instance) 
-      && IS_GPIO_INIT_PARAM_STRUCT_IN_SRAM1((uint32_t)gpio_init_struct))
+      && IS_GPIO_INIT_PARAM_STRUCT_IN_SRAM((uint32_t)gpio_init_struct))
       {
         init_status = HAL_OK;
 

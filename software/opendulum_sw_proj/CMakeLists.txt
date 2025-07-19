@@ -12,8 +12,16 @@
 #
 #		Dependencies: 
 #			- CMake and Make
-#			- arm-none-eabi-gcc installed via MSYS, by typing:   <pacman -S mingw-w64-x86_64-arm-none-eabi-gcc>   without the <>
+#			- MSYS2, for installing arm-none-eabi-gcc:
+#				- arm-none-eabi-gcc installed via MSYS, by typing:   <pacman -S mingw-w64-x86_64-arm-none-eabi-gcc>   without the <>
 #           - just, using winget, by typing   <winget install --id Casey.Just --exact>   into command line without the <> 
+#
+#		Add to Path: 
+#			- MSYS2 bin, for example, it may look like this: C:\msys64\mingw64\bin 
+#				- This is for the ARM GCC build exe's, and they should be contained in the above bin folder after using MSYS2 to install ARM GCC
+#			- Just, using winget, the default install directory is automatically added to "User" path env var instead of the system env var path
+# 			- CMAKE, for example this path may look like: C:\Program Files\CMake\bin
+#			- GnuWin32/bin for MAKE.   
 #
 #  GIT SUBMODULE CMD MESSAGES
 #  git submodule add -b "master" 'https://github.com/STMicroelectronics/stm32g4xx_hal_driver.git' 'software/opendulum_sw_proj/source/vendor/STM32G4xx_HAL_Driver'
