@@ -70,21 +70,21 @@ class OS_Tick
           LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM2);
         else
           LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM5);
-  
+
         timer_hal_handle.Init.Period = 0xFFFFFFFF;
         timer_hal_handle.Init.Prescaler = 0;
         timer_hal_handle.Init.ClockDivision = 0;
         timer_hal_handle.Init.CounterMode = TIM_COUNTERMODE_DOWN;
         timer_hal_handle.Init.RepetitionCounter = 0;
-  
+
         tmp_hal_err_ret_val = HAL_TIM_Base_Init(&timer_hal_handle);
 
         tmp_hal_err_ret_val = (HAL_StatusTypeDef)(HAL_TIM_Base_Start(&timer_hal_handle) | tmp_hal_err_ret_val);
 
         if(tmp_hal_err_ret_val == HAL_OK)
         {
-          was_initialization_successful = true;
           polling_timer_status = OS_TICK_POLLING_TIMER_EXPIRED;
+          was_initialization_successful = true;
         }
         else
         {          
@@ -118,7 +118,7 @@ class OS_Tick
       uint32_t tmp_ticks_to_wait_for = wait_time_in_us * (OS_TICK_SYSCLK_FREQ / 1000000);
       uint32_t tmp_start_tick = get_counter_val();
 
-      while(tmp_ticks_to_wait_for < (tmp_start_tick - get_counter_val()) \
+      while(tmp_ticks_to_wait_for > (tmp_start_tick - get_counter_val()) \
       && was_initialization_successful == true)
       {
         // do nothing, simply wait until the correct time has elapsed
@@ -149,7 +149,7 @@ class OS_Tick
         break;
 
         case OS_TICK_POLLING_TIMER_RUNNING:
-          if(polling_timer_length_in_ticks > (polling_timer_start_tick - get_counter_val()))
+          if(polling_timer_length_in_ticks < (polling_timer_start_tick - get_counter_val()))
             polling_timer_status = OS_TICK_POLLING_TIMER_EXPIRED;
         break;
       }
