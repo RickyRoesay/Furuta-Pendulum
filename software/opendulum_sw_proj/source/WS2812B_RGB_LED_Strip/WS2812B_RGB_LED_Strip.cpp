@@ -18,6 +18,9 @@
  * IMPORTANT: NOTE: DMA1 CAN NOT WRITE TO GPIO
  * on the STM32F4!!!!  A helpful guide that goes into more detail can be found using 
  * this link:  http://www.efton.sk/STM32/gotcha/g30.html
+ * 
+ * MORE: IMPORTANT: NOTE: DMA 1 and DMA 2 CAN write to GPIO on the STM32G4!  We are 
+ * not affected by this limitation on the G4 series, only the F4 series...
  */
 
 
@@ -144,11 +147,14 @@ WS2812B_Status_e  WS2812B_RGB_LED_Strip::init_dma_and_timer_peripherals(uint8_t 
     
     tmp_hal_err_ret_val = (HAL_StatusTypeDef)(HAL_TIM_Base_Start(&timer_handle) | tmp_hal_err_ret_val);
 
-    __HAL_RCC_DMA2_CLK_ENABLE();
+    //__HAL_RCC_DMA2_CLK_ENABLE();
+    __HAL_RCC_DMA1_CLK_ENABLE();
     __HAL_RCC_DMAMUX1_CLK_ENABLE();
 
-    dma_handle.Instance = DMA2_Channel1;
-    dma_handle.DmaBaseAddress = DMA2;
+    //dma_handle.Instance = DMA2_Channel1;
+    //dma_handle.DmaBaseAddress = DMA2;
+    dma_handle.Instance = DMA1_Channel1;
+    dma_handle.DmaBaseAddress = DMA1;
 
     dma_handle.Init.Request = DMA_REQUEST_TIM7_UP; // Trigger on TIM7 UP
     dma_handle.Init.Direction = DMA_MEMORY_TO_PERIPH;

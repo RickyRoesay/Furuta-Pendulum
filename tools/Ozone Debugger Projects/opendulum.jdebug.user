@@ -2,27 +2,25 @@
 
 
 Breakpoint=C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/opendulum_sw_proj/source/GPIO/GPIO_Pin.hpp:92:23, State=BP_STATE_DISABLED
-OpenDocument="startup_stm32g474ceux.s", FilePath="C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/opendulum_sw_proj/source/vendor/startup_stm32g474ceux.s", Line=41
-OpenDocument="OS_Tick.hpp", FilePath="C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/opendulum_sw_proj/source/OS_Tick.hpp", Line=107
-OpenDocument="WS2812B_RGB_LED_Strip.cpp", FilePath="C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/opendulum_sw_proj/source/WS2812B_RGB_LED_Strip/WS2812B_RGB_LED_Strip.cpp", Line=148
-OpenDocument="GPIO_Pin.hpp", FilePath="C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/opendulum_sw_proj/source/GPIO/GPIO_Pin.hpp", Line=215
+OpenDocument="OS_Tick.hpp", FilePath="C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/opendulum_sw_proj/source/OS_Tick.hpp", Line=92
+OpenDocument="startup_stm32g474ceux.s", FilePath="C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/opendulum_sw_proj/source/vendor/startup_stm32g474ceux.s", Line=98
 OpenDocument="pins.cpp", FilePath="C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/opendulum_sw_proj/source/GPIO/pins.cpp", Line=0
-OpenDocument="stm32g4xx_hal_dma.c", FilePath="C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/opendulum_sw_proj/source/vendor/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dma.c", Line=136
-OpenDocument="main.cpp", FilePath="C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/opendulum_sw_proj/source/main.cpp", Line=120
+OpenDocument="main.cpp", FilePath="C:/Users/Owner/Documents/Github_Repos/Furuta-Pendulum/software/opendulum_sw_proj/source/main.cpp", Line=12
 OpenToolbar="Debug", Floating=0, x=0, y=0
-OpenWindow="Registers 1", DockArea=RIGHT, x=0, y=1, w=471, h=594, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, FilteredItems=[], RefreshRate=1
-OpenWindow="Source Files", DockArea=LEFT, x=0, y=1, w=1310, h=165, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=471, h=384, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Registers 1", DockArea=RIGHT, x=0, y=1, w=395, h=587, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, FilteredItems=[], RefreshRate=1
+OpenWindow="Source Files", DockArea=LEFT, x=0, y=1, w=1233, h=187, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=395, h=391, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 OpenWindow="Memory 1", DockArea=BOTTOM, x=1, y=0, w=1272, h=331, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, EditorAddress=0x40020824
-OpenWindow="Watched Data 1", DockArea=LEFT, x=0, y=0, w=1310, h=813, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Watched Data 1", DockArea=LEFT, x=0, y=0, w=1233, h=791, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=1287, h=331, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 SmartViewPlugin="", Page="", Toolbar="Hidden", Window="SmartView 1"
 TableHeader="Source Files", SortCol="File", SortOrder="ASCENDING", VisibleCols=["File";"Status";"Size";"#Insts";"Path"], ColWidths=[174;100;100;100;902]
 TableHeader="Power Sampling", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";"Ch 0"], ColWidths=[100;100;100]
-TableHeader="Registers 1", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Description"], ColWidths=[196;144;2234]
-TableHeader="Watched Data 1", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Value";"Location";"Refresh";"Access"], ColWidths=[740;100;104;366;100]
+TableHeader="Registers 1", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Description"], ColWidths=[196;144;224]
+TableHeader="Watched Data 1", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Value";"Location";"Refresh";"Access"], ColWidths=[740;100;104;289;100]
 TableHeader="RegisterSelectionDialog", SortCol="None", SortOrder="ASCENDING", VisibleCols=[], ColWidths=[]
 TableHeader="TargetExceptionDialog", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Address";"Description"], ColWidths=[200;100;100;376]
 WatchedExpression="uwTick", Window=Watched Data 1
 WatchedExpression="startup_status", Window=Watched Data 1
 WatchedExpression="rbg_led_strip_drv", Window=Watched Data 1
+WatchedExpression="test", Window=Watched Data 1

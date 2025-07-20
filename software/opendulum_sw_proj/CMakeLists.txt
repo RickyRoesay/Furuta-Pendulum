@@ -73,6 +73,7 @@ set (PROJECT_SOURCES
 	source/GPIO/pins.cpp
 	source/simple_foc_utils/simple_foc_utils.cpp
 	source/WS2812B_RGB_LED_Strip/WS2812B_RGB_LED_Strip.cpp
+	source/startup/startup.c
 	
 	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_adc_ex.c
 	${STM32G4xx_HAL_DIRECTORY}/stm32g4xx_hal_adc.c
@@ -177,12 +178,14 @@ set (PROJECT_INCLUDES
 	source/vendor/cmsis_device_g4/Include/
 	source/vendor/cmsis_core/
 	source/vendor/
+	source/vendor/STM32G4xx_HAL_Driver/
+	source/vendor/STM32G4xx_HAL_Driver/Inc/
+	
 	source/
+	source/startup/
 	source/GPIO/
 	source/simple_foc_utils/
 	source/WS2812B_RGB_LED_Strip/
-	source/vendor/STM32G4xx_HAL_Driver/
-	source/vendor/STM32G4xx_HAL_Driver/Inc/
     )
 
 

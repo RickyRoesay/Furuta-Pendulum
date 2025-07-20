@@ -1,4 +1,14 @@
 {
     "cmake.sourceDirectory":  "${workspaceFolder}/Furuta-Pendulum/software/opendulum_sw_proj",
-    "C_Cpp.default.compilerPath": "c:\\msys64\\mingw64\\bin\\arm-none-eabi-gcc.exe"
+    "C_Cpp.default.compilerPath": "c:\\msys64\\mingw64\\bin\\arm-none-eabi-gcc.exe",
+    "files.associations": {
+        "startup.h": "c",
+        "stm32g4xx_hal.h": "c",
+        "stm32g4xx_ll_utils.h": "c",
+        "stm32g4xx_hal_rcc.h": "c",
+        "stm32g4xx_hal_def.h": "c",
+        "stdint.h": "c",
+        "stm32g4xx_ll_exti.h": "c",
+        "stm32g4xx_ll_crs.h": "c"
+    }
 }
