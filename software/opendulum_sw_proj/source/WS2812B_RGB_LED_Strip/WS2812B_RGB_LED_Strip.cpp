@@ -23,8 +23,8 @@
 
 /** NOTE: These values are for the STM32F4xx MCU and may differ for other variants.
  * TRM:SECION: 2.3 Memory Map. */
-#define LOWEST_ADDRESS_OF_GPIO_RAM      0x40020000
-#define HIGHEST_ADDRESS_OF_GPIO_RAM     0x40022BFF
+#define LOWEST_ADDRESS_OF_GPIO_RAM      GPIOA_BASE
+#define HIGHEST_ADDRESS_OF_GPIO_RAM     GPIOG_BASE + 0x28UL //0x28 is the max gpio register offset from the base address
 
 
 /** By default, the timer is configured with prescaler and clock divider
@@ -145,6 +145,7 @@ WS2812B_Status_e  WS2812B_RGB_LED_Strip::init_dma_and_timer_peripherals(uint8_t 
     tmp_hal_err_ret_val = (HAL_StatusTypeDef)(HAL_TIM_Base_Start(&timer_handle) | tmp_hal_err_ret_val);
 
     __HAL_RCC_DMA2_CLK_ENABLE();
+    __HAL_RCC_DMAMUX1_CLK_ENABLE();
 
     dma_handle.Instance = DMA2_Channel1;
     dma_handle.DmaBaseAddress = DMA2;
