@@ -1,0 +1,57 @@
+AS5047_nCS  -> PB2                  GPIO config'd, not a slave select pin
+AS5047_CLK  -> Aux1 A -> PA5        AF5, SPI1 SCLK
+AS5047_MISO -> Aux1 B -> PB4        AF5, SPI1 MISO
+AS5047_MOSI -> Aux1 C -> PA7        AF5, SPI1 MOSI
+SSD1357__D#                     -> Aux1 E -> PB3 & PB9
+SSD1357__nRST                   -> Aux1 D -> PA15
+SSD1357__SCLK                   -> Aux2 A -> PF1                       AF5, SPI2 SCLK
+SSD1357__MISO                   -> Aux2 B -> PF0 & PA10 (PA10 used)    AF5, SPI2 MISO
+SSD1357__MOSI                   -> Aux2 C -> PC4 & PA11 (PA11 used)    AF5, SPI2 MOSI
+SSD1357__nCS                    -> Aux2 D -> PB7                       
+SPI3_SCLK
+SPI3_MOSI
+SPI3_MISO
+IMU_nCS
+IMU_INT1
+IMU_INT2
+DRV8323_nCS
+DRV8323_nFAULT
+DRV8323_ENABLE
+EEPROM_nCS
+EEPROM_nWP
+PH_A_HS
+PH_A_LS
+PH_B_HS
+PH_B_LS
+PH_C_HS
+PH_C_LS
+PH_A_Isns
+PH_B_Isns
+PH_C_Isns
+FET_NTC_Vsns
+PRECHARGE_NTC_Vsns
+VBUS_IN_Vsns
+VBUS_Post_PC_Vsns
+V5p0_Vsns
+V3p3_Vsns
+Motor_ENC_A
+Motor_ENC_A
+Motor_ENC_B
+Motor_ENC_B
+Motor_ENC_Z
+Motor_ENC_Z
+PRECHARGE_BYPASS_EN
+LED 
+SPARE_1
+SPARE_2
+DAC_1
+DAC_2
+WS2812B_Dout
+Menu_ENC_A
+Menu_ENC_B
+Menu_ENC_Push_Btn
+Soft_Key_Switch_Btn
+CAN_TX
+CAN_RX
+OSC_XTAL_1
+OSC_XTAL_2

@@ -43,6 +43,9 @@ HAL_StatusTypeDef startup_status; // tracks startup status, unused for now
 
 float test = 0.0f;
 
+
+
+
 int main(void)
 {
   startup_status = startup_run();

@@ -16,15 +16,10 @@
  * 
  * segment pairs (in 3, RGB) scale with columns. 
  * 
+ * 
+ * 
  * For coordinates aligning with the screens intended orientation, width = x, and 
- * height = y will be used. 
- * 
- * For pixel coordinates, a (horizontal) and b (vertical) axis symbols will be used.  A will 
- * scale/point in the same direction as x, but the main distinction will be for offset
- * values from the cursor position.  The cursor postion will be in the X,Y coordinate system, representing
- * the screens intended orientation for the final design, and starting from the bottom left of the screen.
- * 
- * */
+ * height = y will be used. */
 //
 
 

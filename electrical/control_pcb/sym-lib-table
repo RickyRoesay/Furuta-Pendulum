@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "Pendulum_Control_PCB_Lib")(type "KiCad")(uri "${KIPRJMOD}/custom_libraries/Pendulum_Control_PCB_Lib.kicad_sym")(options "")(descr ""))
+)

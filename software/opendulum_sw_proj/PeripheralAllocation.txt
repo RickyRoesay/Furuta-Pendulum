@@ -13,25 +13,95 @@ DMA1 CHz -> SPI1 RX DMA
 
 
 ///////////////////////////////////////////////////////////
+    Mag Encoder:
 The AS5048 has different commands than the AS5047.  
 For now, lets just do a direct replacement of the IC with the AS5048A.
 
-AS5047_nCS -> PB2               GPIO config'd, not a slave select pin
-AS5047_CLK -> Aux1 A -> PA5     AF5, SPI1 SCLK
-AS5047_MISO -> Aux1 B -> PB4    AF5, SPI1 MISO
-AS5047_MOSI -> Aux1 C -> PA7    AF5, SPI1 MOSI
+AS5047_nCS  -> PB2                  GPIO config'd, not a slave select pin
+AS5047_CLK  -> Aux1 A -> PA5        AF5, SPI1 SCLK
+AS5047_MISO -> Aux1 B -> PB4        AF5, SPI1 MISO
+AS5047_MOSI -> Aux1 C -> PA7        AF5, SPI1 MOSI
 
 
 ///////////////////////////////////////////////////////////
-
+    OLED Screen:
 SSD1357__D# OR LED_Data_out     -> Aux1 E -> PB3 & PB9
-SSD1357__nRST   -> Aux1 D -> PA15
-SSD1357__SCLK   -> Aux2 A -> PF1                       AF5, SPI2 SCLK
-SSD1357__MISO   -> Aux2 B -> PF0 & PA10 (PA10 used)    AF5, SPI2 MISO
-SSD1357__MOSI   -> Aux2 C -> PC4 & PA11 (PA11 used)    AF5, SPI2 MOSI
-SSD1357__nCS    -> Aux2 D -> PB7                       
+SSD1357__nRST                   -> Aux1 D -> PA15
+SSD1357__SCLK                   -> Aux2 A -> PF1                       AF5, SPI2 SCLK
+SSD1357__MISO                   -> Aux2 B -> PF0 & PA10 (PA10 used)    AF5, SPI2 MISO
+SSD1357__MOSI                   -> Aux2 C -> PC4 & PA11 (PA11 used)    AF5, SPI2 MOSI
+SSD1357__nCS                    -> Aux2 D -> PB7                       
+
+///////////////////////////////////////////////////////////
+    IMU
+SPI3_SCLK
+SPI3_MOSI
+SPI3_MISO
+IMU_nCS
+INT1
+INT2
+
+
+///////////////////////////////////////////////////////////
+    DRV8323 Gate Driver
+SPI3
+DRV8323_nCS
+DRV8323_nFAULT
+DRV8323_ENABLE
+CAL pin is optional, can be accessed via SPI...
+
+
+
+///////////////////////////////////////////////////////////
+    EEPROM
+SPI3
+EEPROM_nCS
+EEPROM_nHOLD - optional?
+EEPROM_nWP - optional?
+
+
+
+///////////////////////////////////////////////////////////
+    MISC HW Signals
+
+PH_A_HS
+PH_A_LS
+PH_B_HS
+PH_B_LS
+PH_C_HS
+PH_C_LS
+
+PH_A_Isns
+PH_B_Isns
+PH_C_Isns
+
+FET_NTC_Vsns
+PRECHARGE_NTC_Vsns
+
+VBUS_IN_Vsns
+VBUS_Post_PC_Vsns
+V5p0_Vsns
+V3p3_Vsns
+
+Motor_ENC_A - 2x connections
+Motor_ENC_B - 2x connections
+Motor_ENC_Z - 2x connections
+
+PRECHARGE_BYPASS_EN
+VREF_EN   ?
+
+WS2812B_Dout
+
+Menu_ENC_Pulse
+Menu_ENC_Push_Btn
+
+Soft_Key_Switch_Btn
 
 
 LED1 -> PB15
 LED2 -> PC6 
+
+
+
+
 

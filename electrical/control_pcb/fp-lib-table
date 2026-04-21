@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "1_Pendulum_Control_PCB_Footprint_Lib")(type "KiCad")(uri "${KIPRJMOD}/custom_libraries/1_Pendulum_Control_PCB_Footprint_Lib.pretty")(options "")(descr ""))
+)
